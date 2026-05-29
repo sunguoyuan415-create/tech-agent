@@ -1,0 +1,7 @@
+services:
+  tech-agent-web:
+    build: .
+    ports:
+      - "4173:80"
+    environment:
+      - NODE_ENV=production
