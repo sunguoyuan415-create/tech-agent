@@ -575,6 +575,12 @@ function PublicSection({
                 <span>{item.status}</span>
                 <strong>{item.size}</strong>
               </div>
+              {item.url ? (
+                <a className="download-link" href={item.url} target="_blank" rel="noreferrer">
+                  <Download size={16} />
+                  {locale === 'zh' ? '下载' : 'Download'}
+                </a>
+              ) : null}
             </article>
           ))}
         </div>

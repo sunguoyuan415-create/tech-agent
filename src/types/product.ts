@@ -85,6 +85,7 @@ export interface Artifact {
 export interface DownloadBuild {
   platform: string
   file: string
+  url?: string
   status: 'Release ready' | 'Nightly' | 'Planned'
   size: string
 }

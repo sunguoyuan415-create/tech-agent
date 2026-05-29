@@ -299,34 +299,39 @@ export const artifacts: Artifact[] = [
 
 export const downloads: DownloadBuild[] = [
   {
-    platform: 'Windows',
-    file: 'Tech-Agent-Setup-x64.exe',
+    platform: 'Windows Installer',
+    file: 'Tech-agent_1.0.7_x64-setup.exe',
+    url: 'https://github.com/sunguoyuan415-create/tech-agent/releases/download/v1.0.7/Tech-agent_1.0.7_x64-setup.exe',
     status: 'Release ready',
-    size: '142 MB',
+    size: '1.9 MB',
   },
   {
-    platform: 'macOS Apple Silicon',
-    file: 'Tech-Agent-aarch64.dmg',
+    platform: 'Windows MSI',
+    file: 'Tech-agent_1.0.7_x64_en-US.msi',
+    url: 'https://github.com/sunguoyuan415-create/tech-agent/releases/download/v1.0.7/Tech-agent_1.0.7_x64_en-US.msi',
     status: 'Release ready',
-    size: '118 MB',
+    size: '2.9 MB',
   },
   {
-    platform: 'macOS Intel',
-    file: 'Tech-Agent-x64.dmg',
+    platform: 'macOS Universal',
+    file: 'Tech-agent_1.0.7_universal.dmg',
+    url: 'https://github.com/sunguoyuan415-create/tech-agent/releases/download/v1.0.7/Tech-agent_1.0.7_universal.dmg',
     status: 'Release ready',
-    size: '121 MB',
+    size: '6.0 MB',
+  },
+  {
+    platform: 'macOS App Archive',
+    file: 'Tech-agent_universal.app.tar.gz',
+    url: 'https://github.com/sunguoyuan415-create/tech-agent/releases/download/v1.0.7/Tech-agent_universal.app.tar.gz',
+    status: 'Release ready',
+    size: '5.8 MB',
   },
   {
     platform: 'Web App',
     file: 'https://sunguoyuan415-create.github.io/tech-agent',
+    url: 'https://sunguoyuan415-create.github.io/tech-agent',
     status: 'Release ready',
     size: 'cloud',
-  },
-  {
-    platform: 'Docker',
-    file: 'ghcr.io/sunguoyuan415-create/tech-agent',
-    status: 'Nightly',
-    size: '364 MB',
   },
 ]
 
