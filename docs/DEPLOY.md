@@ -47,8 +47,29 @@ Open `http://localhost:4173`.
 ## Production Checklist
 
 - Connect a real API at `VITE_API_BASE_URL`.
+- Deploy `services/api` to a Node host when using the full backend.
 - Configure OAuth redirect URLs.
 - Enable HTTPS.
 - Add error reporting.
 - Add a privacy policy and terms page for public usage.
 - Publish signed desktop artifacts through GitHub Releases.
+
+## Full Backend
+
+The Batch 2 backend lives in `services/api`.
+
+```bash
+npm run dev:api
+```
+
+Production hosts can run:
+
+```bash
+PORT=8787 WEB_ORIGIN=https://YOUR_NAME.github.io node services/api/src/server.js
+```
+
+The frontend should use:
+
+```bash
+VITE_API_BASE_URL=https://your-api-host.example
+```

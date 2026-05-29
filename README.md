@@ -8,6 +8,8 @@ This repository currently contains the production-ready web application shell an
 
 - Advanced React + TypeScript web workspace
 - Login screen with API server connection
+- Email verification login flow
+- Node API service under `services/api`
 - Model API vault for OpenAI, Anthropic, Gemini, DeepSeek, and custom gateways
 - Multi-agent console for Builder, Researcher, Operator, and Analyst roles
 - Cloud runtime dashboard, task timeline, artifact panel, and tool permission UI
@@ -21,10 +23,10 @@ This repository currently contains the production-ready web application shell an
 
 ```bash
 npm install
-npm run dev
+npm run dev:full
 ```
 
-Open the URL printed by Vite. The app supports a demo sign-in if `API base URL` is empty. To connect a real backend, set an API URL in the sign-in form or create `.env` from `.env.example`.
+Open the URL printed by Vite. The API service runs on `http://localhost:8787` during development. For production, deploy the web app to GitHub Pages, Vercel, or Netlify and deploy the API service to a Node host.
 
 ## Build
 
@@ -74,13 +76,13 @@ See [docs/API.md](docs/API.md).
 
 ## Desktop apps
 
-The product includes download surfaces for:
+The repository now includes a Tauri desktop client scaffold in `apps/desktop`. The release workflow builds:
 
 - Windows x64 installer
 - macOS Apple Silicon DMG
 - macOS Intel DMG
 
-The recommended packaging path is Tauri or Electron with this web app as the authenticated client. See [docs/DESKTOP.md](docs/DESKTOP.md).
+See [docs/DESKTOP.md](docs/DESKTOP.md) and `.github/workflows/desktop-release.yml`.
 
 ## GitHub publishing
 

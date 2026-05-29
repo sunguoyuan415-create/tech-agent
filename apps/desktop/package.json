@@ -1,0 +1,19 @@
+{
+  "name": "@tech-agent/desktop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "web:dev": "vite --host 0.0.0.0 --port 1420",
+    "web:build": "vite build"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.9.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.2",
+    "vite": "^8.0.12"
+  }
+}

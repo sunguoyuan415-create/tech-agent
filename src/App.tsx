@@ -52,7 +52,14 @@ import {
   providers,
   workflowNodes,
 } from './data/product'
-import { loginToTechAgent } from './lib/api'
+import {
+  connectProvider,
+  getDefaultApiBaseUrl,
+  listProviders,
+  sendEmailCode,
+  verifyEmailCode,
+  type ProviderConnection,
+} from './lib/api'
 import { useLocalStorage } from './lib/useLocalStorage'
 import type { Session } from './types/product'
 import './App.css'
@@ -67,11 +74,11 @@ const copy = {
     nav: ['产品', '市场', '下载', '安全', '开发者', '价格'],
     signIn: '登录',
     enter: '进入控制台',
-    heroKicker: '开源云端 AI 员工操作系统',
-    heroTitle: '创建、调教、部署和管理一整家公司级 AI 员工。',
+    heroKicker: '企业级云端 Agent 平台',
+    heroTitle: '把开发、运营、数据和支持工作接入一个可治理的自动化平台。',
     heroBody:
-      'Tech-agent 不是聊天框。它是云端 AI Workforce OS：每个 Agent 拥有角色、记忆、插件、云电脑、权限、任务队列和审计记录，用户只需要打开网站登录使用。',
-    primaryCta: '开始创建 AI 员工',
+      'Tech-agent 提供角色配置、知识库、插件权限、云端执行环境、任务队列和审计日志，团队可以通过网页、Windows 与 macOS 客户端统一使用。',
+    primaryCta: '创建工作空间',
     secondaryCta: '查看系统架构',
     liveProduct: '实时产品蓝图',
     loginTitle: '邮箱验证码登录',
@@ -95,11 +102,11 @@ const copy = {
     nav: ['Product', 'Market', 'Download', 'Security', 'Developers', 'Pricing'],
     signIn: 'Sign in',
     enter: 'Open console',
-    heroKicker: 'Open-source cloud AI workforce OS',
-    heroTitle: 'Create, train, deploy, and manage a company of AI workers.',
+    heroKicker: 'Enterprise cloud agent platform',
+    heroTitle: 'Run development, operations, data, and support work from one governed automation platform.',
     heroBody:
-      'Tech-agent is not a chat box. It is a cloud AI Workforce OS where each agent has a role, memory, plugins, cloud computer, permissions, task queue, and audit trail.',
-    primaryCta: 'Create AI workers',
+      'Tech-agent combines role configuration, knowledge, plugin permissions, cloud execution, task queues, and audit logs across web, Windows, and macOS clients.',
+    primaryCta: 'Create workspace',
     secondaryCta: 'View architecture',
     liveProduct: 'Live product map',
     loginTitle: 'Email code sign-in',
@@ -174,6 +181,33 @@ const commandButtons = [
   { icon: KeyRound, label: 'Connect API' },
 ]
 
+const providerTemplates = [
+  {
+    name: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-5',
+    note: 'Reasoning, coding, multimodal work',
+  },
+  {
+    name: 'Anthropic',
+    baseUrl: 'https://api.anthropic.com',
+    model: 'claude-opus',
+    note: 'Writing, review, long-form planning',
+  },
+  {
+    name: 'Gemini',
+    baseUrl: 'https://generativelanguage.googleapis.com',
+    model: 'gemini-pro',
+    note: 'Research, long context, document analysis',
+  },
+  {
+    name: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com',
+    model: 'deepseek-reasoner',
+    note: 'Cost-efficient reasoning and code',
+  },
+]
+
 function App() {
   const [theme, setTheme] = useLocalStorage<Theme>('tech-agent-theme', 'dark')
   const [locale, setLocale] = useLocalStorage<Locale>('tech-agent-locale', 'zh')
@@ -209,25 +243,30 @@ function App() {
     const apiBaseUrl = String(formData.get('apiBaseUrl') || '').trim()
     const code = String(formData.get('code') || '')
 
-    if (authStep === 'email') {
-      setSentCode('246810')
-      setAuthStep('code')
-      return
-    }
+    try {
+      if (authStep === 'email') {
+        const result = await sendEmailCode({
+          email,
+          apiBaseUrl,
+        })
+        setSentCode(result.demoCode ?? 'sent')
+        setAuthStep('code')
+        return
+      }
 
-    if (code !== '246810') {
-      setAuthError(locale === 'zh' ? '验证码不正确，演示码是 246810。' : 'Wrong code. Demo code is 246810.')
-      return
+      const nextSession = await verifyEmailCode({
+        email,
+        code,
+        organization,
+        apiBaseUrl,
+      })
+      setSession(nextSession)
+      setAuthOpen(false)
+      setAuthStep('email')
+      setSentCode('')
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Auth API failed')
     }
-
-    const nextSession = await loginToTechAgent({
-      email,
-      password: code,
-      organization,
-      apiBaseUrl,
-    })
-    setSession(nextSession)
-    setAuthOpen(false)
   }
 
   const shellActions = (
@@ -442,7 +481,7 @@ function Hero({
             <div className="map-header">
               <span className="status-badge running">
                 <Activity size={15} />
-                AI company running
+                production workspace
               </span>
               <button type="button">
                 <Command size={16} />
@@ -495,7 +534,7 @@ function PublicSection({
       <section className="site-band">
         <SectionHeading
           eyebrow="Plugin Cloud"
-          title={locale === 'zh' ? '插件不是小工具，是 AI 员工的能力供应链。' : 'Plugins are the supply chain for AI workers.'}
+          title={locale === 'zh' ? '插件市场按权限、审计和运行策略管理所有外部能力。' : 'A governed plugin marketplace for external capabilities.'}
           body={locale === 'zh' ? '每个插件都有权限、评分、安装量、安全等级、审计记录和人工审批策略。' : 'Every plugin carries permissions, scores, installs, trust level, audit logs, and approval rules.'}
         />
         <div className="plugin-market-grid">
@@ -601,7 +640,7 @@ git push -u origin main`}</pre>
       <section className="site-band">
         <SectionHeading
           eyebrow="Plans"
-          title={locale === 'zh' ? '从个人 AI 员工，到企业 AI 部门。' : 'From one AI worker to an enterprise AI department.'}
+          title={locale === 'zh' ? '从个人工作区，到企业级自动化部门。' : 'From a personal workspace to an enterprise automation department.'}
           body={locale === 'zh' ? '价格页会支持 Free、Pro、Team、Enterprise，以及自带 API Key 模式。' : 'Pricing supports Free, Pro, Team, Enterprise, and bring-your-own-key mode.'}
         />
         <div className="pricing-grid">
@@ -622,8 +661,8 @@ git push -u origin main`}</pre>
     <section className="site-band">
       <SectionHeading
         eyebrow="Product System"
-        title={locale === 'zh' ? 'Tech-agent 由五个复杂系统组成，不是单一聊天页面。' : 'Tech-agent is five systems, not one chat page.'}
-        body={locale === 'zh' ? 'AI 公司结构、人格基因、云电脑、插件云、工作流操作系统共同组成一个可上线的云端产品。' : 'AI company structure, persona genome, cloud computer, plugin cloud, and workflow OS form a deployable product.'}
+        title={locale === 'zh' ? 'Tech-agent 由五个企业系统组成，覆盖从接入到交付的完整流程。' : 'Tech-agent combines five enterprise systems from onboarding to delivery.'}
+        body={locale === 'zh' ? '角色配置、知识管理、云端执行、插件治理和工作流编排共同组成一个可上线的企业级系统。' : 'Role configuration, knowledge, cloud execution, plugin governance, and workflow orchestration form a deployable enterprise system.'}
       />
       <div className="system-grid">
         {capabilities.map((capability) => {
@@ -672,6 +711,53 @@ function AppWorkspace({
   onAgentChange: (agent: string) => void
   onPromptChange: (prompt: string) => void
 }) {
+  const [connectedProviders, setConnectedProviders] = useState<ProviderConnection[]>([])
+  const [providerMessage, setProviderMessage] = useState('')
+
+  useEffect(() => {
+    if (appView !== 'settings') {
+      return
+    }
+
+    let cancelled = false
+    listProviders(session)
+      .then((result) => {
+        if (!cancelled) {
+          setConnectedProviders(result.providers)
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setProviderMessage(error instanceof Error ? error.message : 'Provider API unavailable')
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [appView, session])
+
+  async function handleProviderConnect(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setProviderMessage('')
+    const form = event.currentTarget
+    const formData = new FormData(event.currentTarget)
+
+    try {
+      const provider = await connectProvider(session, {
+        name: String(formData.get('name') || 'Custom Provider'),
+        baseUrl: String(formData.get('baseUrl') || ''),
+        model: String(formData.get('model') || ''),
+        apiKey: String(formData.get('apiKey') || ''),
+      })
+      setConnectedProviders((current) => [provider, ...current])
+      setProviderMessage('Provider connected and stored in the backend vault.')
+      form.reset()
+    } catch (error) {
+      setProviderMessage(error instanceof Error ? error.message : 'Provider connection failed')
+    }
+  }
+
   if (appView === 'studio') {
     return (
       <div className="workspace-page">
@@ -740,7 +826,7 @@ function AppWorkspace({
       <div className="workspace-page">
         <WorkspaceHero
           eyebrow="Plugin Cloud"
-          title={locale === 'zh' ? '给 AI 员工安装真实世界能力。' : 'Install real-world capabilities for AI workers.'}
+          title={locale === 'zh' ? '给团队工作区安装可审计的真实世界能力。' : 'Install auditable real-world capabilities into the workspace.'}
           action="Review permissions"
         />
         <div className="plugin-market-grid in-app">
@@ -768,7 +854,7 @@ function AppWorkspace({
       <div className="workspace-page">
         <WorkspaceHero
           eyebrow="Cloud Computer"
-          title={locale === 'zh' ? '每个 Agent 都有自己的云电脑，不在用户本地跑。' : 'Every agent gets a cloud computer. Nothing heavy runs locally.'}
+          title={locale === 'zh' ? '每个 Agent 都有独立云电脑，执行环境、文件和回放全部托管。' : 'Every agent gets a hosted cloud computer with execution, files, and replay.'}
           action="Open remote desktop"
         />
         <div className="computer-layout">
@@ -837,21 +923,17 @@ function AppWorkspace({
     )
   }
 
-  if (appView === 'memory' || appView === 'settings') {
+  if (appView === 'memory') {
     return (
       <div className="workspace-page">
         <WorkspaceHero
-          eyebrow={appView === 'memory' ? 'Memory Lab' : 'Control Plane'}
+          eyebrow="Memory Lab"
           title={
-            appView === 'memory'
-              ? locale === 'zh'
-                ? '上传资料、示例和偏好，让 Agent 逐渐像你的团队成员。'
-                : 'Upload knowledge, examples, and preferences so agents learn your team.'
-              : locale === 'zh'
-                ? '统一管理模型、成本、权限、设备和审计。'
-                : 'Manage models, cost, permissions, devices, and audit trails.'
+            locale === 'zh'
+              ? '上传资料、示例和偏好，让 Agent 逐渐像你的团队成员。'
+              : 'Upload knowledge, examples, and preferences so agents learn your team.'
           }
-          action={appView === 'memory' ? 'Upload corpus' : 'Connect API'}
+          action="Upload corpus"
         />
         <div className="ops-grid">
           {[...providers, ...productStats.slice(0, 2)].map((item) => (
@@ -862,6 +944,29 @@ function AppWorkspace({
             </article>
           ))}
         </div>
+      </div>
+    )
+  }
+
+  if (appView === 'settings') {
+    return (
+      <div className="workspace-page">
+        <WorkspaceHero
+          eyebrow="Model Gateway"
+          title={
+            locale === 'zh'
+              ? '把真实 AI API 接进来：模型、密钥、路由、成本和权限统一管理。'
+              : 'Connect real AI APIs: models, keys, routing, cost, and policy in one control plane.'
+          }
+          action="Save gateway"
+        />
+        <ProviderWizard
+          locale={locale}
+          message={providerMessage}
+          providers={connectedProviders}
+          session={session}
+          onSubmit={handleProviderConnect}
+        />
       </div>
     )
   }
@@ -965,7 +1070,7 @@ function AuthModal({
   onClose: () => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
 }) {
-  const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
+  const defaultApiBaseUrl = getDefaultApiBaseUrl()
 
   return (
     <div className="modal-backdrop">
@@ -977,7 +1082,7 @@ function AuthModal({
           <Mail size={15} />
           {t.loginTitle}
         </span>
-        <h2>{locale === 'zh' ? '登录后才能创建和运行 AI 员工。' : 'Sign in before creating and running AI workers.'}</h2>
+        <h2>{locale === 'zh' ? '登录后创建工作区并接入模型服务。' : 'Sign in to create a workspace and connect model services.'}</h2>
         <p>{t.loginBody}</p>
         <form className="auth-form" onSubmit={onSubmit}>
           <label>
@@ -995,16 +1100,105 @@ function AuthModal({
           {authStep === 'code' && (
             <label>
               {t.code}
-              <input name="code" inputMode="numeric" placeholder="246810" />
+              <input name="code" defaultValue={sentCode === 'sent' ? '' : sentCode} inputMode="numeric" placeholder="246810" />
             </label>
           )}
-          {sentCode && <div className="demo-code">{t.demoCode}: 246810</div>}
+          {sentCode && <div className="demo-code">{t.demoCode}: {sentCode}</div>}
           {authError && <div className="form-error">{authError}</div>}
           <button className="primary-button" type="submit">
             <KeyRound size={18} />
             {authStep === 'email' ? t.sendCode : t.verify}
           </button>
         </form>
+      </section>
+    </div>
+  )
+}
+
+function ProviderWizard({
+  locale,
+  message,
+  providers,
+  session,
+  onSubmit,
+}: {
+  locale: Locale
+  message: string
+  providers: ProviderConnection[]
+  session: Session
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+}) {
+  return (
+    <div className="provider-layout">
+      <section className="panel provider-wizard">
+        <PanelTitle icon={KeyRound} title="AI API Onboarding" action="Backend vault" />
+        <div className="gateway-status">
+          <div>
+            <span>Backend</span>
+            <strong>{session.apiBaseUrl || 'demo mode'}</strong>
+          </div>
+          <div>
+            <span>Session</span>
+            <strong>{session.token.slice(0, 8)}...</strong>
+          </div>
+          <div>
+            <span>Org</span>
+            <strong>{session.org}</strong>
+          </div>
+        </div>
+        <form className="provider-form" onSubmit={onSubmit}>
+          <label>
+            Provider
+            <input name="name" defaultValue="OpenAI" />
+          </label>
+          <label>
+            Base URL
+            <input name="baseUrl" defaultValue="https://api.openai.com/v1" />
+          </label>
+          <label>
+            Default model
+            <input name="model" defaultValue="gpt-5" />
+          </label>
+          <label>
+            API key
+            <input name="apiKey" type="password" placeholder="sk-..." />
+          </label>
+          {message && <div className="demo-code">{message}</div>}
+          <button className="primary-button" type="submit">
+            <KeyRound size={18} />
+            {locale === 'zh' ? '接入并保存到后端' : 'Connect and save'}
+          </button>
+        </form>
+      </section>
+
+      <section className="panel provider-list-panel">
+        <PanelTitle icon={BrainCircuit} title="Provider presets" action="Route policy" />
+        <div className="provider-template-grid">
+          {providerTemplates.map((template) => (
+            <article key={template.name}>
+              <strong>{template.name}</strong>
+              <span>{template.model}</span>
+              <p>{template.note}</p>
+              <small>{template.baseUrl}</small>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel provider-list-panel">
+        <PanelTitle icon={ShieldCheck} title="Connected vault" action="Audit" />
+        <div className="connected-list">
+          {providers.map((provider) => (
+            <article key={provider.id}>
+              <div>
+                <strong>{provider.name}</strong>
+                <span>{provider.model}</span>
+              </div>
+              <small>{provider.keyPreview}</small>
+              <em>{provider.status}</em>
+            </article>
+          ))}
+        </div>
       </section>
     </div>
   )
@@ -1082,7 +1276,7 @@ function SiteFooter({ locale }: { locale: Locale }) {
       </div>
       <p>
         {locale === 'zh'
-          ? '开源、云端、可下载、可扩展的 AI 员工操作系统。'
+          ? '开源、云端、可下载、可扩展的企业 Agent 平台。'
           : 'Open-source, cloud-first, downloadable, extensible AI workforce operating system.'}
       </p>
       <div>
@@ -1121,7 +1315,7 @@ function translateAgent(name: string) {
     Designer: '设计界面、检查布局、建立设计系统',
     Tutor: '学习用户风格、沉淀偏好、辅导执行',
   }
-  return labels[name] ?? '云端 AI 员工'
+  return labels[name] ?? '云端 Agent'
 }
 
 export default App
