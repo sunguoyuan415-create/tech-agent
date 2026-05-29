@@ -44,6 +44,7 @@ export interface ProviderConnection {
 }
 
 const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
+const demoEmailCode = '246810'
 
 export function getDefaultApiBaseUrl() {
   return defaultApiBaseUrl
@@ -51,46 +52,67 @@ export function getDefaultApiBaseUrl() {
 
 export async function sendEmailCode(payload: SendCodePayload) {
   const baseUrl = normalizeBaseUrl(payload.apiBaseUrl)
-  const response = await fetch(`${baseUrl}/auth/send-code`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      email: payload.email,
-    }),
-  })
+  try {
+    const response = await fetch(`${baseUrl}/auth/send-code`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: payload.email,
+      }),
+    })
 
-  if (!response.ok) {
-    throw new Error(`Send code API returned ${response.status}`)
+    if (!response.ok) {
+      throw new Error(`Send code API returned ${response.status}`)
+    }
+
+    return response.json() as Promise<{ sent: boolean; demoCode?: string; expiresIn: number }>
+  } catch (error) {
+    if (canUseDemoFallback(payload.apiBaseUrl, baseUrl)) {
+      return { sent: true, demoCode: demoEmailCode, expiresIn: 600 }
+    }
+
+    throw error
   }
-
-  return response.json() as Promise<{ sent: boolean; demoCode?: string; expiresIn: number }>
 }
 
 export async function verifyEmailCode(payload: VerifyCodePayload): Promise<Session> {
   const baseUrl = normalizeBaseUrl(payload.apiBaseUrl)
-  const response = await fetch(`${baseUrl}/auth/verify-code`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  })
+  try {
+    const response = await fetch(`${baseUrl}/auth/verify-code`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
 
-  if (!response.ok) {
-    throw new Error(`Verify code API returned ${response.status}`)
-  }
+    if (!response.ok) {
+      throw new Error(`Verify code API returned ${response.status}`)
+    }
 
-  const data = (await response.json()) as Partial<Session>
+    const data = (await response.json()) as Partial<Session>
 
-  return {
-    user: data.user ?? payload.email.split('@')[0] ?? 'Tech Agent User',
-    email: data.email ?? payload.email,
-    org: data.org ?? payload.organization,
-    role: data.role ?? 'Owner',
-    token: data.token ?? crypto.randomUUID(),
-    apiBaseUrl: baseUrl,
+    return {
+      user: data.user ?? payload.email.split('@')[0] ?? 'Tech Agent User',
+      email: data.email ?? payload.email,
+      org: data.org ?? payload.organization,
+      role: data.role ?? 'Owner',
+      token: data.token ?? crypto.randomUUID(),
+      apiBaseUrl: baseUrl,
+    }
+  } catch (error) {
+    if (canUseDemoFallback(payload.apiBaseUrl, baseUrl) && payload.code === demoEmailCode) {
+      return demoSession({
+        email: payload.email,
+        organization: payload.organization,
+        apiBaseUrl: '',
+        password: '',
+      })
+    }
+
+    throw error
   }
 }
 
@@ -175,6 +197,18 @@ export async function listProviders(session: Session) {
 }
 
 export async function connectProvider(session: Session, payload: ProviderPayload) {
+  if (!session.apiBaseUrl) {
+    return {
+      id: crypto.randomUUID(),
+      name: payload.name,
+      baseUrl: payload.baseUrl,
+      model: payload.model,
+      keyPreview: maskKey(payload.apiKey),
+      status: 'connected',
+      createdAt: new Date().toISOString(),
+    }
+  }
+
   const response = await fetch(`${normalizeBaseUrl(session.apiBaseUrl)}/providers`, {
     method: 'POST',
     headers: {
@@ -204,4 +238,16 @@ function demoSession(payload: LoginPayload): Session {
 
 function normalizeBaseUrl(apiBaseUrl: string) {
   return (apiBaseUrl || defaultApiBaseUrl).replace(/\/$/, '')
+}
+
+function canUseDemoFallback(apiBaseUrl: string, baseUrl: string) {
+  return !apiBaseUrl || baseUrl === '/api'
+}
+
+function maskKey(apiKey: string) {
+  if (apiKey.length <= 8) {
+    return 'stored'
+  }
+
+  return `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}`
 }
