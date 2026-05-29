@@ -1,3 +1,5 @@
+import { handleCors, readSession, sendError } from '../_lib/auth.js'
+
 const runEvents = [
   {
     time: '17:28',
@@ -20,22 +22,29 @@ const runEvents = [
 ]
 
 export default function handler(request, response) {
+  if (handleCors(request, response)) return
+
   if (request.method !== 'POST') {
     response.setHeader('Allow', 'POST')
     response.status(405).json({ error: 'Method not allowed' })
     return
   }
 
-  const { prompt = '', modelProvider = 'openai', workspaceId = 'main' } = request.body ?? {}
-  const id = `run_${crypto.randomUUID()}`
+  try {
+    readSession(request.headers.authorization)
+    const { prompt = '', modelProvider = 'openai', workspaceId = 'main' } = request.body ?? {}
+    const id = `run_${crypto.randomUUID()}`
 
-  response.status(202).json({
-    id,
-    status: 'queued',
-    workspaceId,
-    modelProvider,
-    prompt,
-    eventsUrl: `/api/agent/runs/${id}/events`,
-    events: runEvents,
-  })
+    response.status(202).json({
+      id,
+      status: 'queued',
+      workspaceId,
+      modelProvider,
+      prompt,
+      eventsUrl: `/api/agent/runs/${id}/events`,
+      events: runEvents,
+    })
+  } catch (error) {
+    sendError(response, error)
+  }
 }

@@ -77,7 +77,7 @@
 .section-heading h2,
 .hero-copy h1,
 .persona-card h2,
-.fake-page h3,
+.remote-page h3,
 .task-table strong,
 .workflow-line h3 {
   color: var(--text);
@@ -95,7 +95,7 @@
 .security-grid p,
 .agent-row small,
 .persona-card p,
-.fake-page p,
+.remote-page p,
 .timeline-list p,
 .ops-card p {
   color: var(--muted);
@@ -708,14 +708,14 @@
   padding: 14px;
 }
 
-.demo-code,
+.status-notice,
 .form-error {
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   font-size: 13px;
 }
 
-.demo-code {
+.status-notice {
   color: var(--cyan);
   background: color-mix(in srgb, var(--cyan) 10%, transparent);
 }
@@ -1058,7 +1058,7 @@
   background: var(--terminal);
 }
 
-.fake-address {
+.remote-address {
   min-height: 38px;
   display: flex;
   align-items: center;
@@ -1069,7 +1069,7 @@
   font-family: var(--mono);
 }
 
-.fake-page {
+.remote-page {
   min-height: 420px;
   display: grid;
   place-content: center;
@@ -1080,7 +1080,7 @@
   text-align: center;
 }
 
-.fake-page button {
+.remote-page button {
   min-height: 38px;
   padding: 0 14px;
   border-radius: var(--radius-sm);

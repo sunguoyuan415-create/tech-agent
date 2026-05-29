@@ -15,6 +15,7 @@ export interface SendCodePayload {
 export interface VerifyCodePayload {
   email: string
   code: string
+  verificationId: string
   apiBaseUrl: string
   organization: string
 }
@@ -43,8 +44,7 @@ export interface ProviderConnection {
   createdAt: string
 }
 
-const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
-const demoEmailCode = '246810'
+const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
 
 export function getDefaultApiBaseUrl() {
   return defaultApiBaseUrl
@@ -52,76 +52,63 @@ export function getDefaultApiBaseUrl() {
 
 export async function sendEmailCode(payload: SendCodePayload) {
   const baseUrl = normalizeBaseUrl(payload.apiBaseUrl)
-  try {
-    const response = await fetch(`${baseUrl}/auth/send-code`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: payload.email,
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`Send code API returned ${response.status}`)
-    }
-
-    return response.json() as Promise<{ sent: boolean; demoCode?: string; expiresIn: number }>
-  } catch (error) {
-    if (canUseDemoFallback(payload.apiBaseUrl, baseUrl)) {
-      return { sent: true, demoCode: demoEmailCode, expiresIn: 600 }
-    }
-
-    throw error
+  if (!baseUrl) {
+    throw new Error('Real API base URL is required')
   }
+
+  const response = await fetch(`${baseUrl}/auth/send-code`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      email: payload.email,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Send code API returned ${response.status}`)
+  }
+
+  return response.json() as Promise<{ sent: boolean; verificationId: string; expiresIn: number; delivery: string }>
 }
 
 export async function verifyEmailCode(payload: VerifyCodePayload): Promise<Session> {
   const baseUrl = normalizeBaseUrl(payload.apiBaseUrl)
-  try {
-    const response = await fetch(`${baseUrl}/auth/verify-code`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    })
+  if (!baseUrl) {
+    throw new Error('Real API base URL is required')
+  }
 
-    if (!response.ok) {
-      throw new Error(`Verify code API returned ${response.status}`)
-    }
+  const response = await fetch(`${baseUrl}/auth/verify-code`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
 
-    const data = (await response.json()) as Partial<Session>
+  if (!response.ok) {
+    throw new Error(`Verify code API returned ${response.status}`)
+  }
 
-    return {
-      user: data.user ?? payload.email.split('@')[0] ?? 'Tech Agent User',
-      email: data.email ?? payload.email,
-      org: data.org ?? payload.organization,
-      role: data.role ?? 'Owner',
-      token: data.token ?? crypto.randomUUID(),
-      apiBaseUrl: baseUrl,
-    }
-  } catch (error) {
-    if (canUseDemoFallback(payload.apiBaseUrl, baseUrl) && payload.code === demoEmailCode) {
-      return demoSession({
-        email: payload.email,
-        organization: payload.organization,
-        apiBaseUrl: '',
-        password: '',
-      })
-    }
+  const data = (await response.json()) as Partial<Session>
 
-    throw error
+  return {
+    user: data.user ?? payload.email.split('@')[0] ?? 'Tech Agent User',
+    email: data.email ?? payload.email,
+    org: data.org ?? payload.organization,
+    role: data.role ?? 'Owner',
+    token: data.token ?? crypto.randomUUID(),
+    apiBaseUrl: baseUrl,
   }
 }
 
 export async function loginToTechAgent(payload: LoginPayload): Promise<Session> {
-  if (!payload.apiBaseUrl) {
-    return demoSession(payload)
+  const baseUrl = normalizeBaseUrl(payload.apiBaseUrl)
+  if (!baseUrl) {
+    throw new Error('Real API base URL is required')
   }
 
-  const baseUrl = normalizeBaseUrl(payload.apiBaseUrl)
   const response = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',
     headers: {
@@ -155,11 +142,7 @@ export async function startAgentRun(
   payload: AgentRunPayload,
 ) {
   if (!session.apiBaseUrl) {
-    return {
-      id: crypto.randomUUID(),
-      status: 'queued',
-      message: 'Demo cloud run queued',
-    }
+    throw new Error('Real API base URL is required')
   }
 
   const response = await fetch(`${normalizeBaseUrl(session.apiBaseUrl)}/agent/runs`, {
@@ -180,7 +163,7 @@ export async function startAgentRun(
 
 export async function listProviders(session: Session) {
   if (!session.apiBaseUrl) {
-    return { providers: [] as ProviderConnection[] }
+    throw new Error('Real API base URL is required')
   }
 
   const response = await fetch(`${normalizeBaseUrl(session.apiBaseUrl)}/providers`, {
@@ -198,15 +181,7 @@ export async function listProviders(session: Session) {
 
 export async function connectProvider(session: Session, payload: ProviderPayload) {
   if (!session.apiBaseUrl) {
-    return {
-      id: crypto.randomUUID(),
-      name: payload.name,
-      baseUrl: payload.baseUrl,
-      model: payload.model,
-      keyPreview: maskKey(payload.apiKey),
-      status: 'connected',
-      createdAt: new Date().toISOString(),
-    }
+    throw new Error('Real API base URL is required')
   }
 
   const response = await fetch(`${normalizeBaseUrl(session.apiBaseUrl)}/providers`, {
@@ -225,29 +200,6 @@ export async function connectProvider(session: Session, payload: ProviderPayload
   return response.json() as Promise<ProviderConnection>
 }
 
-function demoSession(payload: LoginPayload): Session {
-  return {
-    user: payload.email.split('@')[0] || 'Owner',
-    email: payload.email || 'owner@tech-agent.dev',
-    org: payload.organization || 'Tech-agent Cloud',
-    role: 'Owner',
-    token: crypto.randomUUID(),
-    apiBaseUrl: '',
-  }
-}
-
 function normalizeBaseUrl(apiBaseUrl: string) {
   return (apiBaseUrl || defaultApiBaseUrl).replace(/\/$/, '')
-}
-
-function canUseDemoFallback(apiBaseUrl: string, baseUrl: string) {
-  return !apiBaseUrl || baseUrl === '/api'
-}
-
-function maskKey(apiKey: string) {
-  if (apiKey.length <= 8) {
-    return 'stored'
-  }
-
-  return `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}`
 }

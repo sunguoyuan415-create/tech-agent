@@ -88,8 +88,8 @@ const copy = {
     email: '邮箱',
     code: '验证码',
     org: '组织空间',
-    api: 'API 入口',
-    demoCode: '演示验证码',
+    api: '真实后端 API 地址',
+    emailSent: '验证码已发送到邮箱',
     dashboard: '控制中心',
     studio: 'Agent Studio',
     memory: '记忆实验室',
@@ -116,8 +116,8 @@ const copy = {
     email: 'Email',
     code: 'Code',
     org: 'Organization',
-    api: 'API base',
-    demoCode: 'Demo code',
+    api: 'Real API base',
+    emailSent: 'Verification code sent to email',
     dashboard: 'Command',
     studio: 'Agent Studio',
     memory: 'Memory Lab',
@@ -216,7 +216,8 @@ function App() {
   const [appView, setAppView] = useState<AppView>('command')
   const [authOpen, setAuthOpen] = useState(false)
   const [authStep, setAuthStep] = useState<'email' | 'code'>('email')
-  const [sentCode, setSentCode] = useState('')
+  const [authNotice, setAuthNotice] = useState('')
+  const [verificationId, setVerificationId] = useState('')
   const [authError, setAuthError] = useState('')
   const [activeAgent, setActiveAgent] = useState(agentProfiles[0].name)
   const [prompt, setPrompt] = useState(
@@ -249,7 +250,8 @@ function App() {
           email,
           apiBaseUrl,
         })
-        setSentCode(result.demoCode ?? 'sent')
+        setVerificationId(result.verificationId)
+        setAuthNotice(`${t.emailSent}: ${email}`)
         setAuthStep('code')
         return
       }
@@ -257,13 +259,15 @@ function App() {
       const nextSession = await verifyEmailCode({
         email,
         code,
+        verificationId,
         organization,
         apiBaseUrl,
       })
       setSession(nextSession)
       setAuthOpen(false)
       setAuthStep('email')
-      setSentCode('')
+      setAuthNotice('')
+      setVerificationId('')
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : 'Auth API failed')
     }
@@ -392,7 +396,7 @@ function App() {
           authError={authError}
           authStep={authStep}
           locale={locale}
-          sentCode={sentCode}
+          authNotice={authNotice}
           t={t}
           onClose={() => setAuthOpen(false)}
           onSubmit={handleAuth}
@@ -872,8 +876,8 @@ function AppWorkspace({
               <strong>remote-browser.builder.tech-agent</strong>
             </div>
             <div className="browser-body">
-              <div className="fake-address">https://github.com/new</div>
-              <div className="fake-page">
+              <div className="remote-address">https://github.com/new</div>
+              <div className="remote-page">
                 <h3>Create a new repository</h3>
                 <p>Agent is preparing the open-source release with approval gate.</p>
                 <button type="button">Awaiting approval</button>
@@ -1061,17 +1065,17 @@ function AppWorkspace({
 
 function AuthModal({
   authError,
+  authNotice,
   authStep,
   locale,
-  sentCode,
   t,
   onClose,
   onSubmit,
 }: {
   authError: string
+  authNotice: string
   authStep: 'email' | 'code'
   locale: Locale
-  sentCode: string
   t: (typeof copy)['zh']
   onClose: () => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
@@ -1101,15 +1105,15 @@ function AuthModal({
           </label>
           <label>
             {t.api}
-            <input name="apiBaseUrl" defaultValue={defaultApiBaseUrl} placeholder="/api" />
+            <input name="apiBaseUrl" defaultValue={defaultApiBaseUrl} placeholder="https://your-api-domain.com" required />
           </label>
           {authStep === 'code' && (
             <label>
               {t.code}
-              <input name="code" defaultValue={sentCode === 'sent' ? '' : sentCode} inputMode="numeric" placeholder="246810" />
+              <input name="code" inputMode="numeric" placeholder="000000" />
             </label>
           )}
-          {sentCode && <div className="demo-code">{t.demoCode}: {sentCode}</div>}
+          {authNotice && <div className="status-notice">{authNotice}</div>}
           {authError && <div className="form-error">{authError}</div>}
           <button className="primary-button" type="submit">
             <KeyRound size={18} />
@@ -1141,7 +1145,7 @@ function ProviderWizard({
         <div className="gateway-status">
           <div>
             <span>Backend</span>
-            <strong>{session.apiBaseUrl || 'demo mode'}</strong>
+            <strong>{session.apiBaseUrl}</strong>
           </div>
           <div>
             <span>Session</span>
@@ -1169,7 +1173,7 @@ function ProviderWizard({
             API key
             <input name="apiKey" type="password" placeholder="sk-..." />
           </label>
-          {message && <div className="demo-code">{message}</div>}
+          {message && <div className="status-notice">{message}</div>}
           <button className="primary-button" type="submit">
             <KeyRound size={18} />
             {locale === 'zh' ? '接入并保存到后端' : 'Connect and save'}

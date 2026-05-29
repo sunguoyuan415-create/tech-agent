@@ -8,15 +8,19 @@ Copy `.env.example` to `.env` and set:
 VITE_API_BASE_URL=https://api.your-domain.com
 VITE_PUBLIC_APP_URL=https://app.your-domain.com
 VITE_GITHUB_REPO=https://github.com/sunguoyuan415-create/tech-agent
+AUTH_SECRET=generate-a-64-character-random-string
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxx
+EMAIL_FROM=Tech-agent <verify@your-domain.com>
+WEB_ORIGIN=https://sunguoyuan415-create.github.io
 ```
 
 ## Vercel
 
 1. Import the GitHub repository.
-2. Set the environment variables.
+2. Set `AUTH_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, and `WEB_ORIGIN`.
 3. Use `npm run build` as the build command.
 4. Use `dist` as the output directory.
-5. Set `VITE_API_BASE_URL=/api` to use the included serverless API skeleton.
+5. Set `VITE_API_BASE_URL=/api` to use the included serverless API.
 
 ## Netlify
 
@@ -48,6 +52,8 @@ Open `http://localhost:4173`.
 
 - Connect a real API at `VITE_API_BASE_URL`.
 - Deploy `services/api` to a Node host when using the full backend.
+- Configure a real email provider. The built-in implementation uses Resend through `RESEND_API_KEY`.
+- Use a verified sender domain for `EMAIL_FROM`.
 - Configure OAuth redirect URLs.
 - Enable HTTPS.
 - Add error reporting.
@@ -65,7 +71,7 @@ npm run dev:api
 Production hosts can run:
 
 ```bash
-PORT=8787 WEB_ORIGIN=https://sunguoyuan415-create.github.io node services/api/src/server.js
+PORT=8787 WEB_ORIGIN=https://sunguoyuan415-create.github.io AUTH_SECRET=... RESEND_API_KEY=... EMAIL_FROM='Tech-agent <verify@your-domain.com>' node services/api/src/server.js
 ```
 
 The frontend should use:

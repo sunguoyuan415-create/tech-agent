@@ -2,20 +2,30 @@ import cors from 'cors'
 import 'dotenv/config'
 import express from 'express'
 import crypto from 'node:crypto'
+import {
+  createSession,
+  createVerificationChallenge,
+  maskKey,
+  normalizeEmail,
+  readSession,
+  sendVerificationEmail,
+  verifyEmailChallenge,
+  verifyProviderKey,
+} from '../../../api/_lib/auth.js'
 
 const app = express()
 const port = Number(process.env.PORT || 8787)
-const publicWebOrigin = process.env.WEB_ORIGIN || 'http://localhost:5173'
+const publicWebOrigins = (process.env.WEB_ORIGIN || 'http://localhost:5173,https://sunguoyuan415-create.github.io')
+  .split(',')
+  .map((origin) => origin.trim())
 
-const codes = new Map()
-const sessions = new Map()
 const providersByOrg = new Map()
 const runs = new Map()
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || origin === publicWebOrigin || origin.startsWith('http://localhost:')) {
+      if (!origin || publicWebOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
         callback(null, true)
         return
       }
@@ -35,23 +45,22 @@ app.get('/health', (_request, response) => {
   })
 })
 
-app.post('/auth/send-code', (request, response) => {
+app.post('/auth/send-code', async (request, response) => {
   const email = normalizeEmail(request.body?.email)
   if (!email) {
     response.status(400).json({ error: 'Email is required' })
     return
   }
 
-  const code = process.env.DEMO_EMAIL_CODE || '246810'
-  const expiresAt = Date.now() + 10 * 60 * 1000
-  codes.set(email, { code, expiresAt, attempts: 0 })
+  const challenge = createVerificationChallenge(email)
+  await sendVerificationEmail({ email, code: challenge.code })
 
   response.json({
     email,
     sent: true,
-    expiresIn: 600,
-    delivery: process.env.SMTP_HOST ? 'smtp' : 'demo',
-    demoCode: process.env.SMTP_HOST ? undefined : code,
+    expiresIn: challenge.expiresIn,
+    verificationId: challenge.verificationId,
+    delivery: 'email',
   })
 })
 
@@ -60,28 +69,10 @@ app.post('/auth/verify-code', (request, response) => {
   const code = String(request.body?.code || '')
   const organization = String(request.body?.organization || 'Tech-agent Cloud')
   const apiBaseUrl = String(request.body?.apiBaseUrl || '')
-  const record = codes.get(email)
+  const verificationId = String(request.body?.verificationId || '')
 
-  if (!record || record.expiresAt < Date.now()) {
-    response.status(401).json({ error: 'Verification code expired' })
-    return
-  }
-
-  record.attempts += 1
-  if (record.attempts > 5) {
-    codes.delete(email)
-    response.status(429).json({ error: 'Too many attempts' })
-    return
-  }
-
-  if (record.code !== code) {
-    response.status(401).json({ error: 'Invalid verification code' })
-    return
-  }
-
-  codes.delete(email)
+  verifyEmailChallenge({ email, code, verificationId })
   const session = createSession({ email, organization, apiBaseUrl })
-  sessions.set(session.token, session)
   response.json(session)
 })
 
@@ -96,7 +87,6 @@ app.post('/auth/login', (request, response) => {
   }
 
   const session = createSession({ email, organization, apiBaseUrl })
-  sessions.set(session.token, session)
   response.json(session)
 })
 
@@ -113,14 +103,20 @@ app.get('/providers', requireSession, (request, response) => {
   })
 })
 
-app.post('/providers', requireSession, (request, response) => {
+app.post('/providers', requireSession, async (request, response) => {
+  const keyCheck = await verifyProviderKey({
+    name: request.body?.name,
+    baseUrl: request.body?.baseUrl,
+    apiKey: request.body?.apiKey,
+  })
   const provider = {
     id: crypto.randomUUID(),
     name: String(request.body?.name || 'Custom Provider'),
     baseUrl: String(request.body?.baseUrl || ''),
     model: String(request.body?.model || ''),
     keyPreview: maskKey(String(request.body?.apiKey || '')),
-    status: request.body?.apiKey ? 'connected' : 'needs_key',
+    status: keyCheck.verified ? 'connected' : 'needs_key',
+    checkedUrl: keyCheck.checkedUrl,
     createdAt: new Date().toISOString(),
   }
 
@@ -184,24 +180,12 @@ app.listen(port, () => {
 })
 
 function requireSession(request, response, next) {
-  const token = String(request.headers.authorization || '').replace('Bearer ', '')
-  const session = sessions.get(token)
-  if (!session) {
-    response.status(401).json({ error: 'Unauthorized' })
+  try {
+    request.session = readSession(request.headers.authorization)
+    next()
+  } catch (error) {
+    response.status(error.statusCode || 401).json({ error: error instanceof Error ? error.message : 'Unauthorized' })
     return
-  }
-  request.session = session
-  next()
-}
-
-function createSession({ email, organization, apiBaseUrl }) {
-  return {
-    user: email.split('@')[0] || 'owner',
-    email,
-    org: organization,
-    role: 'Owner',
-    token: crypto.randomUUID(),
-    apiBaseUrl,
   }
 }
 
@@ -247,16 +231,4 @@ function event(actor, message, state) {
     event: message,
     state,
   }
-}
-
-function maskKey(key) {
-  if (!key) return 'not connected'
-  if (key.length <= 8) return 'connected'
-  return `${key.slice(0, 4)}...${key.slice(-4)}`
-}
-
-function normalizeEmail(email) {
-  return String(email || '')
-    .trim()
-    .toLowerCase()
 }
