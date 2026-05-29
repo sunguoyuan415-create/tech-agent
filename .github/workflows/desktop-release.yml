@@ -28,6 +28,9 @@ jobs:
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
       - uses: dtolnay/rust-toolchain@1.95.0
+      - name: Install macOS Intel target
+        if: matrix.platform == 'macos-latest'
+        run: rustup target add x86_64-apple-darwin
       - name: Install frontend dependencies
         working-directory: apps/desktop
         run: npm install
