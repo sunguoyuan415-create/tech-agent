@@ -30,6 +30,8 @@ jobs:
           VITE_PUBLIC_APP_URL: https://sunguoyuan415-create.github.io/tech-agent
           VITE_GITHUB_REPO: https://github.com/sunguoyuan415-create/tech-agent
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
