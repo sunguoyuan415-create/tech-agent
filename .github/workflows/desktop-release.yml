@@ -44,6 +44,6 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Tech-agent ${{ github.ref_name }}"
           releaseBody: "Windows and macOS desktop clients for Tech-agent Cloud."
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
