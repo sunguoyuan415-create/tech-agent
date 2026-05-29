@@ -3,6 +3,7 @@ import type { LucideIcon } from 'lucide-react'
 export type ViewId =
   | 'workspace'
   | 'agents'
+  | 'training'
   | 'workflows'
   | 'plugins'
   | 'downloads'

@@ -1,6 +1,6 @@
 # Tech-agent API Contract
 
-The web app can run in demo mode, but a public production deployment should connect to a backend through `VITE_API_BASE_URL`. This repository also includes Vercel serverless skeleton endpoints under `api/`, available as `/api/auth/login`, `/api/auth/session`, `/api/agent/runs`, and `/api/agent/runs/:id/events` after Vercel deployment.
+The web app can run in demo mode, but a public production deployment should connect to a backend through `VITE_API_BASE_URL`. This repository also includes Vercel serverless skeleton endpoints under `api/`, available as `/api/auth/login`, `/api/auth/session`, `/api/auth/send-code`, `/api/auth/verify-code`, `/api/agent/runs`, and `/api/agent/runs/:id/events` after Vercel deployment.
 
 ## Authentication
 
@@ -31,6 +31,40 @@ Response:
 ### `GET /auth/session`
 
 Returns the authenticated account, organization, role, feature flags, and active workspace.
+
+### `POST /auth/send-code`
+
+Request:
+
+```json
+{
+  "email": "owner@tech-agent.dev"
+}
+```
+
+Response:
+
+```json
+{
+  "email": "owner@tech-agent.dev",
+  "sent": true,
+  "expiresIn": 600
+}
+```
+
+### `POST /auth/verify-code`
+
+Request:
+
+```json
+{
+  "email": "owner@tech-agent.dev",
+  "organization": "Tech-agent Cloud",
+  "code": "246810"
+}
+```
+
+Response mirrors `POST /auth/login`.
 
 ## Agent Runs
 

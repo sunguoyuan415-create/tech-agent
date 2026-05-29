@@ -2,100 +2,193 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import clsx from 'clsx'
 import {
   Activity,
+  Apple,
   Bell,
   Bot,
-  CircleDot,
+  BrainCircuit,
+  ChevronRight,
   Cloud,
+  Code2,
   Command,
-  Copy,
+  Cpu,
+  Database,
   Download,
-  ExternalLink,
-  Gauge,
+  FileText,
+  Fingerprint,
   GitBranch,
+  Globe2,
+  HardDrive,
   KeyRound,
+  Languages,
   LayoutDashboard,
+  Laptop,
+  Layers3,
+  LockKeyhole,
+  Mail,
+  Moon,
+  Network,
   PackageCheck,
   PanelLeft,
-  Pause,
-  Play,
-  Plus,
-  RefreshCw,
+  PlugZap,
+  Rocket,
+  Search,
   Send,
   Settings2,
   ShieldCheck,
-  SlidersHorizontal,
   Sparkles,
-  SquareTerminal,
+  Store,
+  Sun,
+  UploadCloud,
+  Users,
+  WandSparkles,
   Workflow,
 } from 'lucide-react'
 import {
-  adminTiles,
   agentProfiles,
-  artifacts,
-  auditItems,
   capabilities,
-  commandActions,
-  docsSections,
   downloads,
-  heroVisualRows,
-  platformBadges,
   plugins,
   productStats,
   providers,
-  runEvents,
-  tools,
   workflowNodes,
 } from './data/product'
-import { loginToTechAgent, startAgentRun } from './lib/api'
+import { loginToTechAgent } from './lib/api'
 import { useLocalStorage } from './lib/useLocalStorage'
-import type { NavItem, Session, ViewId } from './types/product'
+import type { Session } from './types/product'
 import './App.css'
 
-const navItems: NavItem[] = [
-  { id: 'workspace', label: 'Workspace', icon: LayoutDashboard },
-  { id: 'agents', label: 'Agents', icon: Bot },
-  { id: 'workflows', label: 'Workflows', icon: Workflow },
-  { id: 'plugins', label: 'Plugins', icon: PackageCheck },
-  { id: 'downloads', label: 'Downloads', icon: Download },
-  { id: 'admin', label: 'Admin', icon: ShieldCheck },
-  { id: 'docs', label: 'Docs', icon: KeyRound },
+type Theme = 'dark' | 'light'
+type Locale = 'zh' | 'en'
+type PublicView = 'home' | 'product' | 'market' | 'download' | 'security' | 'developers' | 'pricing'
+type AppView = 'command' | 'studio' | 'memory' | 'plugins' | 'computer' | 'tasks' | 'settings'
+
+const copy = {
+  zh: {
+    nav: ['产品', '市场', '下载', '安全', '开发者', '价格'],
+    signIn: '登录',
+    enter: '进入控制台',
+    heroKicker: '开源云端 AI 员工操作系统',
+    heroTitle: '创建、调教、部署和管理一整家公司级 AI 员工。',
+    heroBody:
+      'Tech-agent 不是聊天框。它是云端 AI Workforce OS：每个 Agent 拥有角色、记忆、插件、云电脑、权限、任务队列和审计记录，用户只需要打开网站登录使用。',
+    primaryCta: '开始创建 AI 员工',
+    secondaryCta: '查看系统架构',
+    liveProduct: '实时产品蓝图',
+    loginTitle: '邮箱验证码登录',
+    loginBody: '先验证邮箱，再接入 AI API，所有核心执行都在云端运行。',
+    sendCode: '发送验证码',
+    verify: '验证并进入',
+    email: '邮箱',
+    code: '验证码',
+    org: '组织空间',
+    api: 'API 入口',
+    demoCode: '演示验证码',
+    dashboard: '控制中心',
+    studio: 'Agent Studio',
+    memory: '记忆实验室',
+    plugins: '插件云',
+    computer: '云电脑',
+    tasks: '任务中心',
+    settings: '设置',
+  },
+  en: {
+    nav: ['Product', 'Market', 'Download', 'Security', 'Developers', 'Pricing'],
+    signIn: 'Sign in',
+    enter: 'Open console',
+    heroKicker: 'Open-source cloud AI workforce OS',
+    heroTitle: 'Create, train, deploy, and manage a company of AI workers.',
+    heroBody:
+      'Tech-agent is not a chat box. It is a cloud AI Workforce OS where each agent has a role, memory, plugins, cloud computer, permissions, task queue, and audit trail.',
+    primaryCta: 'Create AI workers',
+    secondaryCta: 'View architecture',
+    liveProduct: 'Live product map',
+    loginTitle: 'Email code sign-in',
+    loginBody: 'Verify email first, connect AI APIs next, and run the real work in the cloud.',
+    sendCode: 'Send code',
+    verify: 'Verify and enter',
+    email: 'Email',
+    code: 'Code',
+    org: 'Organization',
+    api: 'API base',
+    demoCode: 'Demo code',
+    dashboard: 'Command',
+    studio: 'Agent Studio',
+    memory: 'Memory Lab',
+    plugins: 'Plugin Cloud',
+    computer: 'Cloud Computer',
+    tasks: 'Task Center',
+    settings: 'Settings',
+  },
+}
+
+const publicViews: PublicView[] = ['product', 'market', 'download', 'security', 'developers', 'pricing']
+
+const appViews: Array<{ id: AppView; icon: typeof LayoutDashboard }> = [
+  { id: 'command', icon: LayoutDashboard },
+  { id: 'studio', icon: Bot },
+  { id: 'memory', icon: BrainCircuit },
+  { id: 'plugins', icon: PackageCheck },
+  { id: 'computer', icon: Cloud },
+  { id: 'tasks', icon: Workflow },
+  { id: 'settings', icon: Settings2 },
 ]
 
-const defaultPrompt =
-  'Build a public Tech-agent workspace, connect model APIs, prepare downloads, and publish the open-source repo.'
+const industrySolutions = [
+  { icon: Code2, title: 'Software Factory', zh: '代码、测试、PR、部署、故障修复和技术文档。' },
+  { icon: Store, title: 'Commerce Ops', zh: '商品上架、竞品监控、客服回复、促销和订单分析。' },
+  { icon: Database, title: 'Data Office', zh: '表格清洗、SQL、图表、日报、财务和商业分析。' },
+  { icon: FileText, title: 'Document Studio', zh: '合同、PPT、PDF、报告、知识库和品牌文案。' },
+  { icon: ShieldCheck, title: 'Security Desk', zh: '权限审批、审计、风险检查、密钥与合规策略。' },
+  { icon: Users, title: 'Team Copilot', zh: '跨部门 AI 团队，自动分工、汇报、复盘和交付。' },
+]
 
-type ApiKeys = Record<'openai' | 'anthropic' | 'gemini' | 'deepseek' | 'custom', string>
+const personaGenes = [
+  ['Execution', 'Autonomous', 92],
+  ['Risk', 'Approval gated', 74],
+  ['Tone', 'Direct and senior', 88],
+  ['Creativity', 'High variance', 81],
+  ['Memory', 'Project trained', 96],
+  ['Cost', 'Balanced routing', 67],
+]
+
+const cloudComputerTiles = [
+  { icon: Globe2, label: 'Browser', state: '4 sessions' },
+  { icon: Command, label: 'Terminal', state: 'sandboxed' },
+  { icon: Code2, label: 'Cloud IDE', state: 'branch ready' },
+  { icon: UploadCloud, label: 'Files', state: '18 synced' },
+  { icon: Database, label: 'Database', state: 'read-only' },
+  { icon: Network, label: 'Replay', state: 'recording' },
+]
+
+const taskRows = [
+  ['Build landing page', 'Designer + Builder', 'running', '73%'],
+  ['Audit plugin permissions', 'Security', 'review', 'waiting'],
+  ['Prepare GitHub release', 'Operator', 'queued', 'next'],
+  ['Analyze pricing pages', 'Researcher', 'done', 'report'],
+]
+
+const commandButtons = [
+  { icon: Search, label: 'Search web' },
+  { icon: UploadCloud, label: 'Upload files' },
+  { icon: PlugZap, label: 'Install plugin' },
+  { icon: KeyRound, label: 'Connect API' },
+]
 
 function App() {
+  const [theme, setTheme] = useLocalStorage<Theme>('tech-agent-theme', 'dark')
+  const [locale, setLocale] = useLocalStorage<Locale>('tech-agent-locale', 'zh')
   const [session, setSession] = useLocalStorage<Session | null>('tech-agent-session', null)
-  const [activeView, setActiveView] = useState<ViewId>('workspace')
-  const [prompt, setPrompt] = useState(defaultPrompt)
-  const [activeAgent, setActiveAgent] = useState(agentProfiles[0].name)
+  const [publicView, setPublicView] = useState<PublicView>('home')
+  const [appView, setAppView] = useState<AppView>('command')
+  const [authOpen, setAuthOpen] = useState(false)
+  const [authStep, setAuthStep] = useState<'email' | 'code'>('email')
+  const [sentCode, setSentCode] = useState('')
   const [authError, setAuthError] = useState('')
-  const [runState, setRunState] = useState<'idle' | 'queued' | 'running' | 'complete'>('running')
-  const [apiKeys, setApiKeys] = useLocalStorage<ApiKeys>('tech-agent-api-vault', {
-    openai: '',
-    anthropic: '',
-    gemini: '',
-    deepseek: '',
-    custom: '',
-  })
-  const [messages, setMessages] = useState([
-    {
-      role: 'user',
-      content: '我要一个开源、可下载、云端运行、网页可用的 Tech-agent。',
-    },
-    {
-      role: 'agent',
-      content:
-        '已建立完整产品目标：高级 Web 工作台、登录/API 接入、云 Agent Runtime、插件市场、工作流、下载页、开源部署。',
-    },
-    {
-      role: 'agent',
-      content:
-        '当前正在生成可公开部署的 React + TypeScript 网页版，并准备 GitHub、Vercel、Docker 与桌面端打包说明。',
-    },
-  ])
+  const [activeAgent, setActiveAgent] = useState(agentProfiles[0].name)
+  const [prompt, setPrompt] = useState(
+    '让 Designer、Builder、Operator、Security 四个 Agent 协作，把 Tech-agent 发布成可公开使用的网站。',
+  )
+  const t = copy[locale]
 
   const activeAgentProfile = useMemo(
     () => agentProfiles.find((agent) => agent.name === activeAgent) ?? agentProfiles[0],
@@ -103,346 +196,706 @@ function App() {
   )
 
   useEffect(() => {
-    window.scrollTo({ left: 0, top: 0 })
-  }, [session, activeView])
+    document.documentElement.dataset.theme = theme
+    document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en'
+  }, [theme, locale])
 
-  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+  async function handleAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setAuthError('')
-
     const formData = new FormData(event.currentTarget)
-    const payload = {
-      email: String(formData.get('email') || 'owner@tech-agent.dev'),
-      password: String(formData.get('password') || 'tech-agent'),
-      apiBaseUrl: String(formData.get('apiBaseUrl') || '').trim(),
-      organization: String(formData.get('organization') || 'Tech-agent Cloud'),
-    }
+    const email = String(formData.get('email') || 'owner@tech-agent.dev')
+    const organization = String(formData.get('organization') || 'Tech-agent Cloud')
+    const apiBaseUrl = String(formData.get('apiBaseUrl') || '').trim()
+    const code = String(formData.get('code') || '')
 
-    try {
-      const nextSession = await loginToTechAgent(payload)
-      setSession(nextSession)
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Unable to reach login API')
-    }
-  }
-
-  async function handleRun() {
-    const nextPrompt = prompt.trim()
-    if (!nextPrompt) {
+    if (authStep === 'email') {
+      setSentCode('246810')
+      setAuthStep('code')
       return
     }
 
-    setMessages((current) => [
-      ...current,
-      { role: 'user', content: nextPrompt },
-      {
-        role: 'agent',
-        content:
-          '收到。Builder、Researcher、Operator、Analyst 已进入同一个云端任务，开始规划、执行、验证和发布。',
-      },
-    ])
-    setRunState('queued')
-
-    if (session) {
-      try {
-        await startAgentRun(session, {
-          prompt: nextPrompt,
-          modelProvider: 'openai',
-          apiKey: apiKeys.openai,
-          workspaceId: 'main',
-        })
-        setRunState('running')
-      } catch {
-        setRunState('running')
-      }
+    if (code !== '246810') {
+      setAuthError(locale === 'zh' ? '验证码不正确，演示码是 246810。' : 'Wrong code. Demo code is 246810.')
+      return
     }
+
+    const nextSession = await loginToTechAgent({
+      email,
+      password: code,
+      organization,
+      apiBaseUrl,
+    })
+    setSession(nextSession)
+    setAuthOpen(false)
   }
 
-  if (!session) {
-    return <AuthGateway authError={authError} onLogin={handleLogin} />
-  }
-
-  return (
-    <div className="app-shell">
-      <SideRail activeView={activeView} onChange={setActiveView} />
-      <main className="app-main">
-        <TopBar
-          activeView={activeView}
-          session={session}
-          runState={runState}
-          onLogout={() => setSession(null)}
-        />
-        {activeView === 'workspace' && (
-          <WorkspaceView
-            activeAgent={activeAgent}
-            activeAgentProfile={activeAgentProfile}
-            apiKeys={apiKeys}
-            messages={messages}
-            prompt={prompt}
-            runState={runState}
-            session={session}
-            onAgentChange={setActiveAgent}
-            onApiKeysChange={setApiKeys}
-            onPromptChange={setPrompt}
-            onRun={handleRun}
-            onRunStateChange={setRunState}
-          />
-        )}
-        {activeView === 'agents' && <AgentsView activeAgent={activeAgent} onAgentChange={setActiveAgent} />}
-        {activeView === 'workflows' && <WorkflowsView />}
-        {activeView === 'plugins' && <PluginsView />}
-        {activeView === 'downloads' && <DownloadsView />}
-        {activeView === 'admin' && <AdminView />}
-        {activeView === 'docs' && <DocsView />}
-      </main>
-    </div>
+  const shellActions = (
+    <ControlStrip
+      locale={locale}
+      theme={theme}
+      onLocale={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
+      onTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+    />
   )
-}
 
-interface AuthGatewayProps {
-  authError: string
-  onLogin: (event: FormEvent<HTMLFormElement>) => void
-}
-
-function AuthGateway({ authError, onLogin }: AuthGatewayProps) {
-  const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
-
-  return (
-    <main className="auth-shell">
-      <section className="auth-product">
-        <div className="brand-row">
-          <div className="brand-mark">
-            <Sparkles size={22} />
-          </div>
-          <div>
-            <strong>Tech-agent</strong>
-            <span>Cloud Agent OS</span>
-          </div>
-        </div>
-
-        <div className="auth-headline">
-          <span className="eyebrow">Open-source cloud workspace</span>
-          <h1>One agent console for code, web, files, data, ops, and releases.</h1>
-          <p>
-            A public web app with login, API routing, plugin permissions, cloud execution panels,
-            workflows, desktop download surfaces, and deploy-ready open-source structure.
-          </p>
-        </div>
-
-        <div className="capability-strip">
-          {capabilities.map((capability) => {
-            const Icon = capability.icon
-            return (
-              <article className={clsx('capability-card', capability.accent)} key={capability.title}>
-                <Icon size={20} />
-                <h2>{capability.title}</h2>
-                <p>{capability.description}</p>
-              </article>
-            )
-          })}
-        </div>
-
-        <div className="visual-console" aria-label="Tech-agent live system preview">
-          <div className="visual-top">
-            <span />
-            <span />
-            <span />
-            <strong>cloud-runtime/prod</strong>
-          </div>
-          <div className="visual-grid">
-            {heroVisualRows.map((row) => {
-              const Icon = row.icon
+  if (session) {
+    return (
+      <div className="os-shell">
+        <aside className="os-rail">
+          <button className="brand-mark" type="button" onClick={() => setSession(null)} aria-label="Back to site">
+            <Sparkles size={21} />
+          </button>
+          <nav>
+            {appViews.map((item) => {
+              const Icon = item.icon
               return (
-                <div className="visual-cell" key={row.label}>
-                  <Icon size={16} />
-                  <span>{row.label}</span>
-                  <b>{row.value}</b>
-                </div>
+                <button
+                  aria-label={item.id}
+                  className={clsx('rail-button', appView === item.id && 'active')}
+                  key={item.id}
+                  title={labelForAppView(item.id, locale)}
+                  type="button"
+                  onClick={() => setAppView(item.id)}
+                >
+                  <Icon size={21} />
+                </button>
               )
             })}
-          </div>
-        </div>
-      </section>
-
-      <section className="auth-panel" aria-label="Sign in">
-        <div className="panel-heading">
-          <span className="status-pill online">
-            <CircleDot size={14} />
-            Public web
-          </span>
-          <h2>Enter Tech-agent</h2>
-          <p>Connect a real API server or use the built-in cloud preview session.</p>
-        </div>
-
-        <form className="auth-form" onSubmit={onLogin}>
-          <label>
-            Email
-            <input name="email" type="email" defaultValue="owner@tech-agent.dev" autoComplete="email" />
-          </label>
-          <label>
-            Password
-            <input name="password" type="password" defaultValue="tech-agent" autoComplete="current-password" />
-          </label>
-          <label>
-            Organization
-            <input name="organization" defaultValue="Tech-agent Cloud" />
-          </label>
-          <label>
-            API base URL
-            <input name="apiBaseUrl" defaultValue={defaultApiBaseUrl} placeholder="/api or https://api.tech-agent.dev" />
-          </label>
-          {authError && <p className="form-error">{authError}</p>}
-          <button className="primary-button" type="submit">
-            <KeyRound size={18} />
-            Sign in
-          </button>
-        </form>
-
-        <div className="oauth-row">
-          <button type="button">
-            <GitBranch size={18} />
-            GitHub
-          </button>
-          <button type="button">
-            <Cloud size={18} />
-            SSO
-          </button>
-        </div>
-
-        <div className="platform-row">
-          {platformBadges.map((badge) => {
-            const Icon = badge.icon
-            return (
-              <span key={badge.label}>
-                <Icon size={15} />
-                {badge.label}
+          </nav>
+          {shellActions}
+        </aside>
+        <main className="os-main">
+          <header className="os-topbar">
+            <div className="os-title">
+              <button className="icon-button" type="button" aria-label="Toggle sidebar">
+                <PanelLeft size={18} />
+              </button>
+              <div>
+                <span>{labelForAppView(appView, locale)}</span>
+                <strong>{session.org}</strong>
+              </div>
+            </div>
+            <div className="topbar-cluster">
+              <span className="status-badge running">
+                <Activity size={15} />
+                cloud live
               </span>
-            )
-          })}
+              <button className="icon-button" type="button" aria-label="Notifications">
+                <Bell size={18} />
+              </button>
+              <button className="user-button" type="button" onClick={() => setSession(null)}>
+                <span>{session.user.slice(0, 2).toUpperCase()}</span>
+                <div>
+                  <strong>{session.user}</strong>
+                  <small>{session.role}</small>
+                </div>
+              </button>
+            </div>
+          </header>
+          <AppWorkspace
+            activeAgent={activeAgent}
+            activeAgentProfile={activeAgentProfile}
+            appView={appView}
+            locale={locale}
+            prompt={prompt}
+            session={session}
+            onAgentChange={setActiveAgent}
+            onPromptChange={setPrompt}
+          />
+        </main>
+      </div>
+    )
+  }
+
+  return (
+    <main className="site-shell">
+      <header className="site-nav">
+        <button className="brand-lockup" type="button" onClick={() => setPublicView('home')}>
+          <span className="brand-mark">
+            <Sparkles size={22} />
+          </span>
+          <span>
+            <strong>Tech-agent</strong>
+            <small>AI Workforce OS</small>
+          </span>
+        </button>
+        <nav>
+          {publicViews.map((view, index) => (
+            <button
+              className={clsx(publicView === view && 'active')}
+              key={view}
+              type="button"
+              onClick={() => setPublicView(view)}
+            >
+              {t.nav[index]}
+            </button>
+          ))}
+        </nav>
+        <div className="nav-actions">
+          {shellActions}
+          <button className="ghost-button" type="button" onClick={() => setAuthOpen(true)}>
+            {t.signIn}
+          </button>
+          <button className="primary-button" type="button" onClick={() => setAuthOpen(true)}>
+            <Rocket size={18} />
+            {t.enter}
+          </button>
         </div>
-      </section>
+      </header>
+
+      <Hero locale={locale} t={t} onAuth={() => setAuthOpen(true)} onPublicView={setPublicView} />
+      <PublicSection view={publicView} locale={locale} onAuth={() => setAuthOpen(true)} />
+      <SiteFooter locale={locale} />
+
+      {authOpen && (
+        <AuthModal
+          authError={authError}
+          authStep={authStep}
+          locale={locale}
+          sentCode={sentCode}
+          t={t}
+          onClose={() => setAuthOpen(false)}
+          onSubmit={handleAuth}
+        />
+      )}
     </main>
   )
 }
 
-interface TopBarProps {
-  activeView: ViewId
-  session: Session
-  runState: 'idle' | 'queued' | 'running' | 'complete'
-  onLogout: () => void
+function ControlStrip({
+  locale,
+  theme,
+  onLocale,
+  onTheme,
+}: {
+  locale: Locale
+  theme: Theme
+  onLocale: () => void
+  onTheme: () => void
+}) {
+  return (
+    <div className="control-strip">
+      <button type="button" onClick={onLocale} aria-label="Switch language">
+        <Languages size={17} />
+        <span>{locale === 'zh' ? '中' : 'EN'}</span>
+      </button>
+      <button type="button" onClick={onTheme} aria-label="Switch theme">
+        {theme === 'dark' ? <Moon size={17} /> : <Sun size={17} />}
+      </button>
+    </div>
+  )
 }
 
-function TopBar({ activeView, session, runState, onLogout }: TopBarProps) {
-  const title = navItems.find((item) => item.id === activeView)?.label ?? 'Workspace'
-
+function Hero({
+  locale,
+  t,
+  onAuth,
+  onPublicView,
+}: {
+  locale: Locale
+  t: (typeof copy)['zh']
+  onAuth: () => void
+  onPublicView: (view: PublicView) => void
+}) {
   return (
-    <header className="topbar">
-      <div className="topbar-title">
-        <button className="icon-button muted" type="button" aria-label="Toggle navigation">
-          <PanelLeft size={19} />
-        </button>
-        <div>
-          <span>{title}</span>
-          <strong>{session.org}</strong>
+    <section className="hero-section">
+      <div className="hero-copy">
+        <span className="eyebrow">
+          <WandSparkles size={15} />
+          {t.heroKicker}
+        </span>
+        <h1>{t.heroTitle}</h1>
+        <p>{t.heroBody}</p>
+        <div className="hero-actions">
+          <button className="primary-button" type="button" onClick={onAuth}>
+            <Mail size={18} />
+            {t.primaryCta}
+          </button>
+          <button className="ghost-button" type="button" onClick={() => onPublicView('developers')}>
+            <Layers3 size={18} />
+            {t.secondaryCta}
+          </button>
+        </div>
+        <div className="hero-metrics">
+          {productStats.map((stat) => {
+            const Icon = stat.icon
+            return (
+              <article key={stat.label}>
+                <Icon size={18} />
+                <strong>{stat.value}</strong>
+                <span>{stat.label}</span>
+              </article>
+            )
+          })}
         </div>
       </div>
-      <div className="topbar-actions">
-        <span className={clsx('run-badge', runState)}>
-          <Activity size={15} />
-          {runState}
-        </span>
-        <button className="icon-button" type="button" aria-label="Notifications">
-          <Bell size={18} />
-        </button>
-        <button className="icon-button" type="button" aria-label="Settings">
-          <Settings2 size={18} />
-        </button>
-        <button className="user-chip" type="button" onClick={onLogout}>
-          <span>{session.user.slice(0, 2).toUpperCase()}</span>
-          <div>
-            <strong>{session.user}</strong>
-            <small>{session.role}</small>
+      <div className="hero-product">
+        <div className="product-window">
+          <div className="window-top">
+            <span />
+            <span />
+            <span />
+            <strong>{t.liveProduct}</strong>
           </div>
-        </button>
+          <div className="command-map">
+            <div className="map-header">
+              <span className="status-badge running">
+                <Activity size={15} />
+                AI company running
+              </span>
+              <button type="button">
+                <Command size={16} />
+                K
+              </button>
+            </div>
+            <div className="company-grid">
+              {agentProfiles.slice(0, 6).map((agent) => (
+                <article key={agent.name}>
+                  <span className={clsx('agent-dot', agent.status)} />
+                  <h3>{agent.name}</h3>
+                  <p>{locale === 'zh' ? translateAgent(agent.name) : agent.role}</p>
+                  <div>
+                    <b>{agent.score}</b>
+                    <small>{agent.model}</small>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className="cloud-computer-mini">
+              {cloudComputerTiles.map((tile) => {
+                const Icon = tile.icon
+                return (
+                  <div key={tile.label}>
+                    <Icon size={17} />
+                    <span>{tile.label}</span>
+                    <strong>{tile.state}</strong>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
       </div>
-    </header>
+    </section>
   )
 }
 
-interface SideRailProps {
-  activeView: ViewId
-  onChange: (view: ViewId) => void
-}
+function PublicSection({
+  view,
+  locale,
+  onAuth,
+}: {
+  view: PublicView
+  locale: Locale
+  onAuth: () => void
+}) {
+  if (view === 'market') {
+    return (
+      <section className="site-band">
+        <SectionHeading
+          eyebrow="Plugin Cloud"
+          title={locale === 'zh' ? '插件不是小工具，是 AI 员工的能力供应链。' : 'Plugins are the supply chain for AI workers.'}
+          body={locale === 'zh' ? '每个插件都有权限、评分、安装量、安全等级、审计记录和人工审批策略。' : 'Every plugin carries permissions, scores, installs, trust level, audit logs, and approval rules.'}
+        />
+        <div className="plugin-market-grid">
+          {plugins.map((plugin) => (
+            <article className="market-card" key={plugin.name}>
+              <div>
+                <span>{plugin.category}</span>
+                <strong>{plugin.trust}</strong>
+              </div>
+              <h3>{plugin.name}</h3>
+              <p>{plugin.description}</p>
+              <footer>
+                <small>{plugin.installs} installs</small>
+                <button type="button">{plugin.enabled ? 'Enabled' : 'Install'}</button>
+              </footer>
+            </article>
+          ))}
+        </div>
+      </section>
+    )
+  }
 
-function SideRail({ activeView, onChange }: SideRailProps) {
+  if (view === 'download') {
+    return (
+      <section className="site-band">
+        <SectionHeading
+          eyebrow="Desktop + Web"
+          title={locale === 'zh' ? '网页直接用，Windows 和 Mac 下载后也是真的客户端。' : 'Use it on the web, or install real Windows and Mac clients.'}
+          body={locale === 'zh' ? '桌面端是云端账号的原生入口：快捷键、托盘、通知、拖拽上传和自动更新。' : 'Desktop clients are native cloud entry points with shortcuts, tray, notifications, uploads, and auto updates.'}
+        />
+        <div className="download-grid">
+          {downloads.map((item) => (
+            <article key={item.platform}>
+              <PlatformIcon platform={item.platform} />
+              <h3>{item.platform}</h3>
+              <p>{item.file}</p>
+              <div>
+                <span>{item.status}</span>
+                <strong>{item.size}</strong>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  if (view === 'security') {
+    return (
+      <section className="site-band security-layout">
+        <SectionHeading
+          eyebrow="Permission OS"
+          title={locale === 'zh' ? '安全不是补丁，而是每个 Agent 的操作系统。' : 'Security is not a patch. It is the operating system for every agent.'}
+          body={locale === 'zh' ? '沙箱、密钥金库、审批、审计、禁区、插件权限和任务回放默认启用。' : 'Sandboxes, vaults, approvals, audits, restricted zones, plugin scopes, and replay are built in.'}
+        />
+        <div className="security-grid">
+          {[
+            [ShieldCheck, 'Approval gates', 'Risky actions wait for human review.'],
+            [LockKeyhole, 'Secret vault', 'Provider keys are scoped and encrypted.'],
+            [Fingerprint, 'Audit trail', 'Every tool call is explainable.'],
+            [HardDrive, 'Sandbox files', 'Cloud files stay workspace scoped.'],
+          ].map(([Icon, title, body]) => {
+            const TypedIcon = Icon as typeof ShieldCheck
+            return (
+              <article key={String(title)}>
+                <TypedIcon size={22} />
+                <h3>{title as string}</h3>
+                <p>{body as string}</p>
+              </article>
+            )
+          })}
+        </div>
+      </section>
+    )
+  }
+
+  if (view === 'developers') {
+    return (
+      <section className="site-band developer-layout">
+        <SectionHeading
+          eyebrow="Open-source platform"
+          title={locale === 'zh' ? '给开发者的不只是 API，是可扩展的 Agent 生态。' : 'Developers get an extensible agent ecosystem, not only APIs.'}
+          body={locale === 'zh' ? '插件 SDK、MCP 网关、Webhook、模型路由、工作流节点和云沙箱都可以扩展。' : 'Extend plugins, MCP gateways, webhooks, model routing, workflow nodes, and cloud sandboxes.'}
+        />
+        <div className="terminal-card">
+          <div className="window-top">
+            <span />
+            <span />
+            <span />
+            <strong>ship.sh</strong>
+          </div>
+          <pre>{`npm run build
+vercel --prod
+git remote add origin git@github.com:YOUR_NAME/tech-agent.git
+git push -u origin main`}</pre>
+        </div>
+      </section>
+    )
+  }
+
+  if (view === 'pricing') {
+    return (
+      <section className="site-band">
+        <SectionHeading
+          eyebrow="Plans"
+          title={locale === 'zh' ? '从个人 AI 员工，到企业 AI 部门。' : 'From one AI worker to an enterprise AI department.'}
+          body={locale === 'zh' ? '价格页会支持 Free、Pro、Team、Enterprise，以及自带 API Key 模式。' : 'Pricing supports Free, Pro, Team, Enterprise, and bring-your-own-key mode.'}
+        />
+        <div className="pricing-grid">
+          {['Free', 'Pro', 'Team', 'Enterprise'].map((plan, index) => (
+            <article className={clsx(index === 2 && 'featured')} key={plan}>
+              <h3>{plan}</h3>
+              <strong>{index === 0 ? '$0' : index === 3 ? 'Custom' : `$${index * 19}`}</strong>
+              <p>{locale === 'zh' ? '包含 Agent、插件、工作流、云任务和用量控制。' : 'Includes agents, plugins, workflows, cloud jobs, and usage controls.'}</p>
+              <button type="button" onClick={onAuth}>Start</button>
+            </article>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
   return (
-    <aside className="side-rail" aria-label="Primary navigation">
-      <div className="side-brand">
-        <Sparkles size={22} />
-      </div>
-      <nav>
-        {navItems.map((item) => {
-          const Icon = item.icon
+    <section className="site-band">
+      <SectionHeading
+        eyebrow="Product System"
+        title={locale === 'zh' ? 'Tech-agent 由五个复杂系统组成，不是单一聊天页面。' : 'Tech-agent is five systems, not one chat page.'}
+        body={locale === 'zh' ? 'AI 公司结构、人格基因、云电脑、插件云、工作流操作系统共同组成一个可上线的云端产品。' : 'AI company structure, persona genome, cloud computer, plugin cloud, and workflow OS form a deployable product.'}
+      />
+      <div className="system-grid">
+        {capabilities.map((capability) => {
+          const Icon = capability.icon
           return (
-            <button
-              className={clsx('rail-button', activeView === item.id && 'active')}
-              key={item.id}
-              type="button"
-              title={item.label}
-              aria-label={item.label}
-              onClick={() => onChange(item.id)}
-            >
-              <Icon size={21} />
-            </button>
+            <article className={capability.accent} key={capability.title}>
+              <Icon size={22} />
+              <h3>{capability.title}</h3>
+              <p>{capability.description}</p>
+            </article>
           )
         })}
-      </nav>
-      <button className="rail-button" type="button" title="Command palette" aria-label="Command palette">
-        <Command size={21} />
-      </button>
-    </aside>
+      </div>
+      <div className="solution-grid">
+        {industrySolutions.map((solution) => {
+          const Icon = solution.icon
+          return (
+            <article key={solution.title}>
+              <Icon size={22} />
+              <h3>{solution.title}</h3>
+              <p>{locale === 'zh' ? solution.zh : 'A prebuilt department playbook with agents, tools, workflows, and templates.'}</p>
+            </article>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 
-interface WorkspaceViewProps {
-  activeAgent: string
-  activeAgentProfile: (typeof agentProfiles)[number]
-  apiKeys: ApiKeys
-  messages: Array<{ role: string; content: string }>
-  prompt: string
-  runState: 'idle' | 'queued' | 'running' | 'complete'
-  session: Session
-  onAgentChange: (agent: string) => void
-  onApiKeysChange: (keys: ApiKeys) => void
-  onPromptChange: (prompt: string) => void
-  onRun: () => void
-  onRunStateChange: (state: 'idle' | 'queued' | 'running' | 'complete') => void
-}
-
-function WorkspaceView({
+function AppWorkspace({
   activeAgent,
   activeAgentProfile,
-  apiKeys,
-  messages,
+  appView,
+  locale,
   prompt,
-  runState,
   session,
   onAgentChange,
-  onApiKeysChange,
   onPromptChange,
-  onRun,
-  onRunStateChange,
-}: WorkspaceViewProps) {
+}: {
+  activeAgent: string
+  activeAgentProfile: (typeof agentProfiles)[number]
+  appView: AppView
+  locale: Locale
+  prompt: string
+  session: Session
+  onAgentChange: (agent: string) => void
+  onPromptChange: (prompt: string) => void
+}) {
+  if (appView === 'studio') {
+    return (
+      <div className="workspace-page">
+        <StudioHeader locale={locale} />
+        <div className="studio-layout">
+          <section className="panel agent-roster">
+            <PanelTitle icon={Bot} title="Role Library" action="New role" />
+            {agentProfiles.map((agent) => (
+              <button
+                className={clsx('agent-row', activeAgent === agent.name && 'active')}
+                key={agent.name}
+                type="button"
+                onClick={() => onAgentChange(agent.name)}
+              >
+                <span className={clsx('agent-dot', agent.status)} />
+                <div>
+                  <strong>{agent.name}</strong>
+                  <small>{locale === 'zh' ? translateAgent(agent.name) : agent.role}</small>
+                </div>
+                <b>{agent.backlog}</b>
+              </button>
+            ))}
+          </section>
+          <section className="panel persona-panel">
+            <PanelTitle icon={WandSparkles} title="Persona Genome" action="Train" />
+            <div className="persona-card">
+              <h2>{activeAgentProfile.name}</h2>
+              <p>{locale === 'zh' ? translateAgent(activeAgentProfile.name) : activeAgentProfile.role}</p>
+              <div className="tag-row">
+                {activeAgentProfile.tools.map((tool) => (
+                  <span key={tool}>{tool}</span>
+                ))}
+              </div>
+            </div>
+            <div className="gene-list">
+              {personaGenes.map(([label, value, score]) => (
+                <div key={label}>
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                  <i style={{ width: `${score}%` }} />
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="panel rules-panel">
+            <PanelTitle icon={ShieldCheck} title="Behavior Rules" action="Save" />
+            {[
+              'Ask before spending money or publishing externally.',
+              'Use Chinese for product planning and English for code comments.',
+              'Prefer direct execution when confidence is high.',
+              'Never expose provider keys in logs or artifacts.',
+            ].map((rule) => (
+              <label key={rule}>
+                <input defaultChecked type="checkbox" />
+                <span>{rule}</span>
+              </label>
+            ))}
+          </section>
+        </div>
+      </div>
+    )
+  }
+
+  if (appView === 'plugins') {
+    return (
+      <div className="workspace-page">
+        <WorkspaceHero
+          eyebrow="Plugin Cloud"
+          title={locale === 'zh' ? '给 AI 员工安装真实世界能力。' : 'Install real-world capabilities for AI workers.'}
+          action="Review permissions"
+        />
+        <div className="plugin-market-grid in-app">
+          {plugins.map((plugin) => (
+            <article className="market-card" key={plugin.name}>
+              <div>
+                <span>{plugin.category}</span>
+                <strong>{plugin.trust}</strong>
+              </div>
+              <h3>{plugin.name}</h3>
+              <p>{plugin.description}</p>
+              <footer>
+                <small>{plugin.installs} installs</small>
+                <button type="button">{plugin.enabled ? 'Enabled' : 'Install'}</button>
+              </footer>
+            </article>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (appView === 'computer') {
+    return (
+      <div className="workspace-page">
+        <WorkspaceHero
+          eyebrow="Cloud Computer"
+          title={locale === 'zh' ? '每个 Agent 都有自己的云电脑，不在用户本地跑。' : 'Every agent gets a cloud computer. Nothing heavy runs locally.'}
+          action="Open remote desktop"
+        />
+        <div className="computer-layout">
+          <section className="browser-frame">
+            <div className="window-top">
+              <span />
+              <span />
+              <span />
+              <strong>remote-browser.builder.tech-agent</strong>
+            </div>
+            <div className="browser-body">
+              <div className="fake-address">https://github.com/new</div>
+              <div className="fake-page">
+                <h3>Create a new repository</h3>
+                <p>Agent is preparing the open-source release with approval gate.</p>
+                <button type="button">Awaiting approval</button>
+              </div>
+            </div>
+          </section>
+          <section className="panel computer-tools">
+            <PanelTitle icon={Cloud} title="Resources" action="Policy" />
+            {cloudComputerTiles.map((tile) => {
+              const Icon = tile.icon
+              return (
+                <div key={tile.label}>
+                  <Icon size={18} />
+                  <span>{tile.label}</span>
+                  <strong>{tile.state}</strong>
+                </div>
+              )
+            })}
+          </section>
+        </div>
+      </div>
+    )
+  }
+
+  if (appView === 'tasks') {
+    return (
+      <div className="workspace-page">
+        <WorkspaceHero
+          eyebrow="Task Center"
+          title={locale === 'zh' ? '所有 AI 工作都变成可恢复、可审批、可重跑的任务。' : 'Every AI action becomes resumable, approvable, replayable work.'}
+          action="Create workflow"
+        />
+        <section className="panel task-table">
+          {taskRows.map(([task, owner, state, progress]) => (
+            <div key={task}>
+              <strong>{task}</strong>
+              <span>{owner}</span>
+              <em className={state}>{state}</em>
+              <b>{progress}</b>
+            </div>
+          ))}
+        </section>
+        <section className="workflow-line">
+          {workflowNodes.map((node, index) => (
+            <article className={node.state} key={node.title}>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <h3>{node.title}</h3>
+              <p>{node.meta}</p>
+            </article>
+          ))}
+        </section>
+      </div>
+    )
+  }
+
+  if (appView === 'memory' || appView === 'settings') {
+    return (
+      <div className="workspace-page">
+        <WorkspaceHero
+          eyebrow={appView === 'memory' ? 'Memory Lab' : 'Control Plane'}
+          title={
+            appView === 'memory'
+              ? locale === 'zh'
+                ? '上传资料、示例和偏好，让 Agent 逐渐像你的团队成员。'
+                : 'Upload knowledge, examples, and preferences so agents learn your team.'
+              : locale === 'zh'
+                ? '统一管理模型、成本、权限、设备和审计。'
+                : 'Manage models, cost, permissions, devices, and audit trails.'
+          }
+          action={appView === 'memory' ? 'Upload corpus' : 'Connect API'}
+        />
+        <div className="ops-grid">
+          {[...providers, ...productStats.slice(0, 2)].map((item) => (
+            <article className="ops-card" key={'name' in item ? item.name : item.label}>
+              <span>{'name' in item ? item.name : item.label}</span>
+              <strong>{'latency' in item ? item.latency : item.value}</strong>
+              <p>{'route' in item ? item.route : 'Cloud usage and operating signal.'}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="workspace-layout">
-      <aside className="left-pane">
-        <section className="panel">
-          <div className="panel-heading compact">
-            <span>Agents</span>
-            <button className="icon-button muted" type="button" aria-label="Add agent">
-              <Plus size={17} />
-            </button>
-          </div>
+    <div className="workbench">
+      <section className="command-panel">
+        <div className="command-head">
+          <span className="status-badge running">
+            <Sparkles size={15} />
+            {activeAgentProfile.name}
+          </span>
+          <span>{activeAgentProfile.model}</span>
+          <span>{session.email}</span>
+        </div>
+        <textarea value={prompt} onChange={(event) => onPromptChange(event.target.value)} />
+        <div className="command-actions">
+          {commandButtons.map(({ icon: Icon, label }) => {
+            return (
+              <button key={label} type="button">
+                <Icon size={16} />
+                {label}
+              </button>
+            )
+          })}
+          <button className="primary-button" type="button">
+            <Send size={18} />
+            Run workforce
+          </button>
+        </div>
+      </section>
+      <section className="workbench-grid">
+        <div className="panel">
+          <PanelTitle icon={Bot} title="AI Company" action="Hire" />
           <div className="agent-list">
             {agentProfiles.map((agent) => (
               <button
@@ -454,426 +907,221 @@ function WorkspaceView({
                 <span className={clsx('agent-dot', agent.status)} />
                 <div>
                   <strong>{agent.name}</strong>
-                  <small>{agent.role}</small>
+                  <small>{locale === 'zh' ? translateAgent(agent.name) : agent.role}</small>
                 </div>
                 <b>{agent.backlog}</b>
               </button>
             ))}
           </div>
-        </section>
-
-        <section className="panel metric-panel">
-          <div className="panel-heading compact">
-            <span>Runtime</span>
-            <span className="status-pill online">cloud</span>
-          </div>
-          <div className="runtime-meter">
-            <Gauge size={38} />
-            <div>
-              <strong>98.7%</strong>
-              <span>success rate</span>
-            </div>
-          </div>
-          <div className="meter-bars">
-            <span style={{ height: '42%' }} />
-            <span style={{ height: '70%' }} />
-            <span style={{ height: '54%' }} />
-            <span style={{ height: '88%' }} />
-            <span style={{ height: '66%' }} />
-            <span style={{ height: '94%' }} />
-            <span style={{ height: '74%' }} />
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-heading compact">
-            <span>Providers</span>
-            <SlidersHorizontal size={16} />
-          </div>
-          <div className="provider-list">
-            {providers.map((provider) => (
-              <div className="provider-row" key={provider.name}>
-                <span className={clsx('provider-status', provider.status)} />
-                <div>
-                  <strong>{provider.name}</strong>
-                  <small>{provider.route}</small>
-                </div>
-                <em>{provider.latency}</em>
-              </div>
-            ))}
-          </div>
-        </section>
-      </aside>
-
-      <section className="center-pane">
-        <div className="command-panel">
-          <div className="command-context">
-            <span className="status-pill online">
-              <Sparkles size={14} />
-              {activeAgentProfile.name}
-            </span>
-            <span>{activeAgentProfile.model}</span>
-            <span>{activeAgentProfile.score} reliability</span>
-            <span>{runState} mode</span>
-          </div>
-          <textarea value={prompt} onChange={(event) => onPromptChange(event.target.value)} />
-          <div className="command-footer">
-            <div className="command-actions">
-              {commandActions.map((action) => {
-                const Icon = action.icon
-                return (
-                  <button key={action.label} type="button">
-                    <Icon size={16} />
-                    {action.label}
-                  </button>
-                )
-              })}
-            </div>
-            <button className="run-button" type="button" onClick={onRun}>
-              <Send size={18} />
-              Run
-            </button>
-          </div>
         </div>
-
-        <div className="conversation-panel">
-          <div className="panel-heading compact">
-            <span>Live Conversation</span>
-            <div className="inline-actions">
-              <button className="icon-button muted" type="button" aria-label="Pause run" onClick={() => onRunStateChange('idle')}>
-                <Pause size={16} />
-              </button>
-              <button className="icon-button muted" type="button" aria-label="Resume run" onClick={() => onRunStateChange('running')}>
-                <Play size={16} />
-              </button>
-            </div>
-          </div>
-          <div className="message-list">
-            {messages.map((message, index) => (
-              <article className={clsx('message', message.role)} key={`${message.role}-${index}`}>
-                <span>{message.role === 'agent' ? 'TA' : 'YOU'}</span>
-                <p>{message.content}</p>
+        <div className="panel">
+          <PanelTitle icon={Activity} title="Live Timeline" action="Replay" />
+          <div className="timeline-list">
+            {taskRows.map(([task, owner, state]) => (
+              <article key={task}>
+                <span className={state} />
+                <div>
+                  <strong>{task}</strong>
+                  <p>{owner}</p>
+                </div>
               </article>
             ))}
           </div>
         </div>
-
-        <div className="wide-panel tool-grid">
-          {tools.map((tool) => {
-            const Icon = tool.icon
-            return (
-              <article className="tool-tile" key={tool.name}>
-                <div>
-                  <Icon size={19} />
-                  <span className={clsx('permission', tool.permission.toLowerCase())}>{tool.permission}</span>
+        <div className="panel">
+          <PanelTitle icon={Cpu} title="Cloud Runtime" action="Scale" />
+          <div className="runtime-stack">
+            {cloudComputerTiles.map((tile) => {
+              const Icon = tile.icon
+              return (
+                <div key={tile.label}>
+                  <Icon size={18} />
+                  <span>{tile.label}</span>
+                  <strong>{tile.state}</strong>
                 </div>
-                <h3>{tool.name}</h3>
-                <p>{tool.description}</p>
-              </article>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </section>
-
-      <aside className="right-pane">
-        <section className="panel">
-          <div className="panel-heading compact">
-            <span>Plan Timeline</span>
-            <RefreshCw size={16} />
-          </div>
-          <div className="timeline">
-            {runEvents.map((event) => (
-              <div className={clsx('timeline-item', event.state)} key={`${event.time}-${event.actor}`}>
-                <span>{event.time}</span>
-                <div>
-                  <strong>{event.actor}</strong>
-                  <p>{event.event}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-heading compact">
-            <span>API Vault</span>
-            <ShieldCheck size={16} />
-          </div>
-          <div className="vault-form">
-            {Object.entries(apiKeys).map(([key, value]) => (
-              <label key={key}>
-                {key}
-                <input
-                  value={value}
-                  type="password"
-                  placeholder={`${key.toUpperCase()}_API_KEY`}
-                  onChange={(event) => onApiKeysChange({ ...apiKeys, [key]: event.target.value })}
-                />
-              </label>
-            ))}
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-heading compact">
-            <span>Artifacts</span>
-            <button
-              className="icon-button muted"
-              type="button"
-              aria-label="Copy session token"
-              onClick={() => navigator.clipboard?.writeText(session.token)}
-            >
-              <Copy size={15} />
-            </button>
-          </div>
-          <div className="artifact-list">
-            {artifacts.map((artifact) => (
-              <div className="artifact-row" key={artifact.name}>
-                <div>
-                  <strong>{artifact.name}</strong>
-                  <small>{artifact.type}</small>
-                </div>
-                <span>{artifact.status}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      </aside>
     </div>
   )
 }
 
-interface AgentsViewProps {
-  activeAgent: string
-  onAgentChange: (agent: string) => void
-}
+function AuthModal({
+  authError,
+  authStep,
+  locale,
+  sentCode,
+  t,
+  onClose,
+  onSubmit,
+}: {
+  authError: string
+  authStep: 'email' | 'code'
+  locale: Locale
+  sentCode: string
+  t: (typeof copy)['zh']
+  onClose: () => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+}) {
+  const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
 
-function AgentsView({ activeAgent, onAgentChange }: AgentsViewProps) {
   return (
-    <div className="page-grid">
-      <section className="wide-panel page-hero">
-        <div>
-          <span className="eyebrow">Multi-agent command</span>
-          <h1>Specialists that share memory, tools, files, and release context.</h1>
-        </div>
-        <button className="primary-button" type="button">
-          <Plus size={18} />
-          New agent
+    <div className="modal-backdrop">
+      <section className="auth-modal">
+        <button className="modal-close" type="button" onClick={onClose}>
+          ×
         </button>
-      </section>
-      <section className="agent-card-grid">
-        {agentProfiles.map((agent) => (
-          <article className={clsx('agent-card', activeAgent === agent.name && 'active')} key={agent.name}>
-            <div className="agent-card-top">
-              <span className={clsx('agent-dot', agent.status)} />
-              <button type="button" onClick={() => onAgentChange(agent.name)}>
-                Select
-              </button>
-            </div>
-            <h2>{agent.name}</h2>
-            <p>{agent.role}</p>
-            <div className="agent-card-meta">
-              <span>{agent.model}</span>
-              <span>{agent.score}</span>
-              <span>{agent.backlog} queued</span>
-            </div>
-            <div className="tag-row">
-              {agent.tools.map((tool) => (
-                <span key={tool}>{tool}</span>
-              ))}
-            </div>
-          </article>
-        ))}
-      </section>
-    </div>
-  )
-}
-
-function WorkflowsView() {
-  return (
-    <div className="page-grid">
-      <section className="wide-panel page-hero">
-        <div>
-          <span className="eyebrow">Workflow studio</span>
-          <h1>Visual automation for long-running cloud tasks and human approvals.</h1>
-        </div>
-        <button className="primary-button" type="button">
-          <Workflow size={18} />
-          Build workflow
-        </button>
-      </section>
-      <section className="workflow-canvas">
-        {workflowNodes.map((node, index) => (
-          <article className={clsx('workflow-node', node.state)} key={node.title}>
-            <span>{String(index + 1).padStart(2, '0')}</span>
-            <h2>{node.title}</h2>
-            <p>{node.meta}</p>
-            <small>{node.kind}</small>
-          </article>
-        ))}
+        <span className="eyebrow">
+          <Mail size={15} />
+          {t.loginTitle}
+        </span>
+        <h2>{locale === 'zh' ? '登录后才能创建和运行 AI 员工。' : 'Sign in before creating and running AI workers.'}</h2>
+        <p>{t.loginBody}</p>
+        <form className="auth-form" onSubmit={onSubmit}>
+          <label>
+            {t.email}
+            <input name="email" type="email" defaultValue="owner@tech-agent.dev" />
+          </label>
+          <label>
+            {t.org}
+            <input name="organization" defaultValue="Tech-agent Cloud" />
+          </label>
+          <label>
+            {t.api}
+            <input name="apiBaseUrl" defaultValue={defaultApiBaseUrl} placeholder="/api" />
+          </label>
+          {authStep === 'code' && (
+            <label>
+              {t.code}
+              <input name="code" inputMode="numeric" placeholder="246810" />
+            </label>
+          )}
+          {sentCode && <div className="demo-code">{t.demoCode}: 246810</div>}
+          {authError && <div className="form-error">{authError}</div>}
+          <button className="primary-button" type="submit">
+            <KeyRound size={18} />
+            {authStep === 'email' ? t.sendCode : t.verify}
+          </button>
+        </form>
       </section>
     </div>
   )
 }
 
-function PluginsView() {
+function SectionHeading({ eyebrow, title, body }: { eyebrow: string; title: string; body: string }) {
   return (
-    <div className="page-grid">
-      <section className="wide-panel page-hero">
-        <div>
-          <span className="eyebrow">Plugin marketplace</span>
-          <h1>Install tools with declared permissions, trust levels, and sandbox boundaries.</h1>
-        </div>
-        <button className="primary-button" type="button">
-          <ExternalLink size={18} />
-          Submit plugin
-        </button>
-      </section>
-      <section className="plugin-grid">
-        {plugins.map((plugin) => (
-          <article className="plugin-card" key={plugin.name}>
-            <div className="plugin-top">
-              <span>{plugin.category}</span>
-              <strong>{plugin.trust}</strong>
-            </div>
-            <h2>{plugin.name}</h2>
-            <p>{plugin.description}</p>
-            <div className="plugin-bottom">
-              <span>{plugin.installs} installs</span>
-              <button className={clsx(plugin.enabled && 'enabled')} type="button">
-                {plugin.enabled ? 'Enabled' : 'Install'}
-              </button>
-            </div>
-          </article>
-        ))}
-      </section>
+    <div className="section-heading">
+      <span className="eyebrow">{eyebrow}</span>
+      <h2>{title}</h2>
+      <p>{body}</p>
     </div>
   )
 }
 
-function DownloadsView() {
+function WorkspaceHero({ eyebrow, title, action }: { eyebrow: string; title: string; action: string }) {
   return (
-    <div className="page-grid">
-      <section className="wide-panel page-hero">
-        <div>
-          <span className="eyebrow">Public downloads</span>
-          <h1>Windows, macOS, Web, and Docker distribution surfaces are ready for release links.</h1>
-        </div>
-        <a className="primary-button link-button" href="https://github.com/" target="_blank" rel="noreferrer">
-          <GitBranch size={18} />
-          GitHub releases
+    <section className="workspace-hero">
+      <div>
+        <span className="eyebrow">{eyebrow}</span>
+        <h1>{title}</h1>
+      </div>
+      <button className="primary-button" type="button">
+        <ChevronRight size={18} />
+        {action}
+      </button>
+    </section>
+  )
+}
+
+function StudioHeader({ locale }: { locale: Locale }) {
+  return (
+    <WorkspaceHero
+      eyebrow="Persona Genome"
+      title={
+        locale === 'zh'
+          ? '像培养员工一样调教 AI：角色、性格、记忆、禁区、示例和评分。'
+          : 'Train AI like employees: roles, traits, memory, limits, examples, and scores.'
+      }
+      action="Train profile"
+    />
+  )
+}
+
+function PanelTitle({ icon: Icon, title, action }: { icon: typeof Bot; title: string; action: string }) {
+  return (
+    <div className="panel-title">
+      <div>
+        <Icon size={18} />
+        <strong>{title}</strong>
+      </div>
+      <button type="button">{action}</button>
+    </div>
+  )
+}
+
+function PlatformIcon({ platform }: { platform: string }) {
+  if (platform.includes('macOS')) return <Apple size={24} />
+  if (platform.includes('Windows')) return <Laptop size={24} />
+  if (platform.includes('Docker')) return <HardDrive size={24} />
+  return <Globe2 size={24} />
+}
+
+function SiteFooter({ locale }: { locale: Locale }) {
+  return (
+    <footer className="site-footer">
+      <div className="brand-lockup">
+        <span className="brand-mark">
+          <Sparkles size={20} />
+        </span>
+        <span>
+          <strong>Tech-agent</strong>
+          <small>AI Workforce OS</small>
+        </span>
+      </div>
+      <p>
+        {locale === 'zh'
+          ? '开源、云端、可下载、可扩展的 AI 员工操作系统。'
+          : 'Open-source, cloud-first, downloadable, extensible AI workforce operating system.'}
+      </p>
+      <div>
+        <a href="https://github.com/" target="_blank" rel="noreferrer">
+          <GitBranch size={17} />
+          GitHub
         </a>
-      </section>
-      <section className="download-table wide-panel">
-        <div className="download-head">
-          <span>Platform</span>
-          <span>Artifact</span>
-          <span>Status</span>
-          <span>Size</span>
-        </div>
-        {downloads.map((download) => (
-          <div className="download-row" key={download.platform}>
-            <strong>{download.platform}</strong>
-            <span>{download.file}</span>
-            <em>{download.status}</em>
-            <span>{download.size}</span>
-          </div>
-        ))}
-      </section>
-    </div>
+        <a href="#download">
+          <Download size={17} />
+          Downloads
+        </a>
+      </div>
+    </footer>
   )
 }
 
-function AdminView() {
-  return (
-    <div className="page-grid">
-      <section className="stat-grid">
-        {productStats.map((stat) => {
-          const Icon = stat.icon
-          return (
-            <article className="stat-card" key={stat.label}>
-              <Icon size={21} />
-              <span>{stat.label}</span>
-              <strong>{stat.value}</strong>
-            </article>
-          )
-        })}
-      </section>
-      <section className="stat-grid">
-        {adminTiles.map((tile) => {
-          const Icon = tile.icon
-          return (
-            <article className="stat-card admin" key={tile.label}>
-              <Icon size={21} />
-              <span>{tile.label}</span>
-              <strong>{tile.value}</strong>
-            </article>
-          )
-        })}
-      </section>
-      <section className="wide-panel audit-panel">
-        <div className="panel-heading compact">
-          <span>Audit stream</span>
-          <ShieldCheck size={16} />
-        </div>
-        {auditItems.map((item) => (
-          <div className="audit-row" key={`${item.time}-${item.action}`}>
-            <span>{item.time}</span>
-            <strong>{item.user}</strong>
-            <p>{item.action}</p>
-            <em className={item.risk.toLowerCase()}>{item.risk}</em>
-          </div>
-        ))}
-      </section>
-    </div>
-  )
+function labelForAppView(view: AppView, locale: Locale) {
+  const labels: Record<AppView, { zh: string; en: string }> = {
+    command: { zh: '控制中心', en: 'Command' },
+    studio: { zh: 'Agent Studio', en: 'Agent Studio' },
+    memory: { zh: '记忆实验室', en: 'Memory Lab' },
+    plugins: { zh: '插件云', en: 'Plugin Cloud' },
+    computer: { zh: '云电脑', en: 'Cloud Computer' },
+    tasks: { zh: '任务中心', en: 'Task Center' },
+    settings: { zh: '设置', en: 'Settings' },
+  }
+  return labels[view][locale]
 }
 
-function DocsView() {
-  return (
-    <div className="page-grid">
-      <section className="wide-panel page-hero">
-        <div>
-          <span className="eyebrow">Developer API</span>
-          <h1>Everything needed to wire a real backend, model gateway, and cloud runtime.</h1>
-        </div>
-        <button className="primary-button" type="button">
-          <Copy size={18} />
-          Copy OpenAPI
-        </button>
-      </section>
-      <section className="docs-grid">
-        {docsSections.map((section) => {
-          const Icon = section.icon
-          return (
-            <article className="docs-card" key={section.title}>
-              <Icon size={20} />
-              <h2>{section.title}</h2>
-              {section.lines.map((line) => (
-                <code key={line}>{line}</code>
-              ))}
-            </article>
-          )
-        })}
-      </section>
-      <section className="wide-panel terminal-panel">
-        <div className="terminal-top">
-          <span />
-          <span />
-          <span />
-          <strong>deploy</strong>
-        </div>
-        <pre>
-          <SquareTerminal size={17} />
-          <code>{`npm run build
-docker compose up --build
-vercel --prod
-git remote add origin git@github.com:YOUR_NAME/tech-agent.git
-git push -u origin main`}</code>
-        </pre>
-      </section>
-    </div>
-  )
+function translateAgent(name: string) {
+  const labels: Record<string, string> = {
+    Builder: '写代码、测试、修复、发布',
+    Researcher: '搜索资料、引用来源、生成结论',
+    Operator: '操作网页、处理邮件、调用 API',
+    Analyst: '分析数据、生成报表、建立模型',
+    Designer: '设计界面、检查布局、建立设计系统',
+    Tutor: '学习用户风格、沉淀偏好、辅导执行',
+  }
+  return labels[name] ?? '云端 AI 员工'
 }
 
 export default App
