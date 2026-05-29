@@ -7,7 +7,7 @@ Copy `.env.example` to `.env` and set:
 ```bash
 VITE_API_BASE_URL=https://api.your-domain.com
 VITE_PUBLIC_APP_URL=https://app.your-domain.com
-VITE_GITHUB_REPO=https://github.com/YOUR_NAME/tech-agent
+VITE_GITHUB_REPO=https://github.com/sunguoyuan415-create/tech-agent
 ```
 
 ## Vercel
@@ -65,7 +65,7 @@ npm run dev:api
 Production hosts can run:
 
 ```bash
-PORT=8787 WEB_ORIGIN=https://YOUR_NAME.github.io node services/api/src/server.js
+PORT=8787 WEB_ORIGIN=https://sunguoyuan415-create.github.io node services/api/src/server.js
 ```
 
 The frontend should use:

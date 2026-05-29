@@ -318,13 +318,13 @@ export const downloads: DownloadBuild[] = [
   },
   {
     platform: 'Web App',
-    file: 'https://app.tech-agent.dev',
+    file: 'https://sunguoyuan415-create.github.io/tech-agent',
     status: 'Release ready',
     size: 'cloud',
   },
   {
     platform: 'Docker',
-    file: 'ghcr.io/tech-agent/tech-agent',
+    file: 'ghcr.io/sunguoyuan415-create/tech-agent',
     status: 'Nightly',
     size: '364 MB',
   },

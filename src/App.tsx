@@ -628,7 +628,7 @@ function PublicSection({
           </div>
           <pre>{`npm run build
 vercel --prod
-git remote add origin git@github.com:YOUR_NAME/tech-agent.git
+git remote add origin https://github.com/sunguoyuan415-create/tech-agent.git
 git push -u origin main`}</pre>
         </div>
       </section>

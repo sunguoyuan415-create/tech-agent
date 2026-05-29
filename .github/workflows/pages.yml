@@ -25,6 +25,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          VITE_BASE_PATH: /tech-agent/
+          VITE_PUBLIC_APP_URL: https://sunguoyuan415-create.github.io/tech-agent
+          VITE_GITHUB_REPO: https://github.com/sunguoyuan415-create/tech-agent
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

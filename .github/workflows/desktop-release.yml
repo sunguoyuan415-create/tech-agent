@@ -35,7 +35,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VITE_PUBLIC_APP_URL: ${{ vars.TECH_AGENT_APP_URL || 'https://app.tech-agent.dev' }}
+          VITE_PUBLIC_APP_URL: ${{ vars.TECH_AGENT_APP_URL || 'https://sunguoyuan415-create.github.io/tech-agent' }}
         with:
           projectPath: apps/desktop
           tagName: ${{ github.ref_name }}

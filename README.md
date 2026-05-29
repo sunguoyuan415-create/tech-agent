@@ -86,12 +86,13 @@ See [docs/DESKTOP.md](docs/DESKTOP.md) and `.github/workflows/desktop-release.ym
 
 ## GitHub publishing
 
-This machine does not have the GitHub CLI installed, so creating the remote repository requires your GitHub account or token. After creating an empty GitHub repo, run:
+The repository is configured for GitHub Pages and GitHub Releases:
 
 ```bash
-git remote add origin git@github.com:YOUR_NAME/tech-agent.git
+gh repo create tech-agent --public --source=. --remote=origin --push
 git branch -M main
 git push -u origin main
+git push --tags
 ```
 
 ## License
