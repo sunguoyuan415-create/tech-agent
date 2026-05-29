@@ -1,6 +1,6 @@
 [package]
 name = "tech-agent"
-version = "1.0.0"
+version = "1.0.7"
 description = "Tech-agent desktop client"
 authors = ["Tech-agent contributors"]
 license = "MIT"

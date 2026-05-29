@@ -1,7 +1,7 @@
 {
   "name": "tech-agent",
   "private": false,
-  "version": "1.0.0",
+  "version": "1.0.7",
   "description": "Open-source cloud agent workspace with web app, API integration, plugin marketplace, workflow studio, and desktop download surfaces.",
   "license": "MIT",
   "repository": {
